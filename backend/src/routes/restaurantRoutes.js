@@ -17,4 +17,8 @@ router.route('/:id/tables')
   .get(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.getTables)
   .post(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.generateTables);
 
+// Menu Management
+const menuRoutes = require('./menuRoutes');
+router.use('/:restaurantId/menu', menuRoutes);
+
 module.exports = router;

@@ -197,9 +197,12 @@ const Restaurants = () => {
                         {rest.subscriptionStatus}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ display: 'flex', gap: '0.5rem' }}>
                       <button className="action-btn" onClick={() => openQrModal(rest)}>
-                        <QrCode size={18} /> QR Codes
+                        <QrCode size={18} /> QR
+                      </button>
+                      <button className="action-btn" onClick={() => window.location.href=`/restaurants/${rest.id}/menu`}>
+                        <Store size={18} /> Menu
                       </button>
                     </td>
                   </tr>

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Restaurants from './pages/Restaurants';
+import RestaurantMenu from './pages/RestaurantMenu';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -27,6 +28,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Restaurants />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/restaurants/:id/menu" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RestaurantMenu />
                 </Layout>
               </ProtectedRoute>
             } 
