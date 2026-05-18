@@ -30,12 +30,14 @@ app.get('/api/health', async (req, res, next) => {
 // Import Routes
 const authRoutes = require('./src/routes/authRoutes');
 const customerAuthRoutes = require('./src/routes/customerAuthRoutes');
+const restaurantRoutes = require('./src/routes/restaurantRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/customer/auth', customerAuthRoutes);
+app.use('/api/restaurants', restaurantRoutes);
 
 // Catch all unhandled routes
-app.all('*', (req, res, next) => {
+app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
