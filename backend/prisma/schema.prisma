@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  @@map("user_role")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  @@map("subscription_status")
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+  @@map("order_status")
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  @@map("payment_status")
+}
+
+model User {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String       @db.VarChar(255)
+  email        String       @unique @db.VarChar(255)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  role         Role         @default(OWNER)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  restaurants  Restaurant[]
+
+  @@map("users")
+}
+
+model Restaurant {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId            String             @map("owner_id") @db.Uuid
+  name               String             @db.VarChar(255)
+  slug               String             @unique @db.VarChar(255)
+  phone              String?            @db.VarChar(20)
+  address            String?            @db.Text
+  subscriptionStatus SubscriptionStatus @default(ACTIVE) @map("subscription_status")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  owner              User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tables             Table[]
+  categories         Category[]
+  menuItems          MenuItem[]
+  orders             Order[]
+
+  @@index([ownerId])
+  @@index([slug])
+  @@map("restaurants")
+}
+
+model Table {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurantId String  @map("restaurant_id") @db.Uuid
+  tableNumber  String  @map("table_number") @db.VarChar(50)
+  qrCodeUrl    String  @map("qr_code_url") @db.VarChar(500)
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@index([restaurantId])
+  @@map("tables")
+}
+
+model Category {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurantId String      @map("restaurant_id") @db.Uuid
+  name         String      @db.VarChar(255)
+  sortOrder    Int         @default(0) @map("sort_order")
+
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menuItems    MenuItem[]
+
+  @@index([restaurantId])
+  @@map("categories")
+}
+
+model MenuItem {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurantId String   @map("restaurant_id") @db.Uuid
+  categoryId   String   @map("category_id") @db.Uuid
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  price        Decimal  @db.Decimal(10, 2)
+  imageUrl     String?  @map("image_url") @db.VarChar(500)
+  isVeg        Boolean  @default(true) @map("is_veg")
+  isAvailable  Boolean  @default(true) @map("is_available")
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems   OrderItem[]
+
+  @@index([restaurantId])
+  @@index([categoryId])
+  @@map("menu_items")
+}
+
+model Customer {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phoneNumber String   @unique @map("phone_number") @db.VarChar(20)
+  name        String?  @db.VarChar(255)
+  lastVisited DateTime @default(now()) @map("last_visited") @db.Timestamptz
+
+  orders      Order[]
+
+  @@index([phoneNumber])
+  @@map("customers")
+}
+
+model Order {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurantId  String        @map("restaurant_id") @db.Uuid
+  tableId       String        @map("table_id") @db.Uuid
+  customerId    String?       @map("customer_id") @db.Uuid
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  totalAmount   Decimal       @default(0.00) @map("total_amount") @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table         Table         @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  orderItems    OrderItem[]
+
+  @@index([restaurantId])
+  @@index([tableId])
+  @@index([customerId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String   @map("order_id") @db.Uuid
+  menuItemId         String   @map("menu_item_id") @db.Uuid
+  quantity           Int
+  unitPrice          Decimal  @map("unit_price") @db.Decimal(10, 2)
+  specialInstructions String? @map("special_instructions") @db.Text
+
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem           MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@map("order_items")
+}
