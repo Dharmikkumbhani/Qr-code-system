@@ -12,4 +12,9 @@ router.route('/')
   .get(restrictTo('SUPER_ADMIN'), restaurantController.getAllRestaurants)
   .post(restrictTo('SUPER_ADMIN'), restaurantController.createRestaurant);
 
+// Tables Management
+router.route('/:id/tables')
+  .get(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.getTables)
+  .post(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.generateTables);
+
 module.exports = router;

@@ -77,3 +77,59 @@ exports.createRestaurant = async (req, res, next) => {
     next(error);
   }
 };
+
+// GET tables for a restaurant
+exports.getTables = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const tables = await prisma.table.findMany({
+      where: { restaurantId: id },
+      orderBy: { tableNumber: 'asc' }
+    });
+    return sendSuccess(res, 200, 'Tables fetched successfully', tables);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST generate tables for a restaurant
+exports.generateTables = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { count } = req.body;
+
+    if (!count || count < 1) {
+      return next(new AppError('Please provide a valid number of tables to generate', 400));
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({ where: { id } });
+    if (!restaurant) {
+      return next(new AppError('Restaurant not found', 404));
+    }
+
+    // Get current highest table number to avoid duplicates if generating more later
+    const existingTables = await prisma.table.count({ where: { restaurantId: id } });
+    
+    const newTables = [];
+    for (let i = 1; i <= count; i++) {
+      const tableNum = existingTables + i;
+      newTables.push({
+        restaurantId: id,
+        tableNumber: `Table ${tableNum}`,
+        qrCodeUrl: `/menu/${restaurant.slug}` // The UUID will be appended on the frontend dynamically
+      });
+    }
+
+    await prisma.table.createMany({ data: newTables });
+    
+    // Fetch all tables to return
+    const allTables = await prisma.table.findMany({
+      where: { restaurantId: id },
+      orderBy: { tableNumber: 'asc' }
+    });
+
+    return sendSuccess(res, 201, `${count} tables generated successfully`, allTables);
+  } catch (error) {
+    next(error);
+  }
+};
