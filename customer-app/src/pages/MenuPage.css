@@ -1,0 +1,120 @@
+.menu-page {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+/* ─── Header ─────────────────────────────────────────────────── */
+.menu-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(13, 13, 13, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.menu-header__inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+  gap: 12px;
+}
+
+.menu-header__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.menu-header__address {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.menu-header__table {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid rgba(249,115,22,0.3);
+  padding: 5px 10px;
+  border-radius: 50px;
+  white-space: nowrap;
+}
+
+/* ─── Main Content ───────────────────────────────────────────── */
+.menu-main {
+  padding: 8px 0;
+}
+
+.menu-section {
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+
+.menu-section__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 18px 0 10px;
+  position: relative;
+}
+
+.menu-section__title::after {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-top: 6px;
+}
+
+.menu-section__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+/* ─── Error / Empty ──────────────────────────────────────────── */
+.menu-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70dvh;
+  padding: 32px;
+  text-align: center;
+  gap: 12px;
+}
+
+.menu-error__icon {
+  font-size: 3rem;
+}
+
+.menu-error h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.menu-error p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.menu-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}

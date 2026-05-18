@@ -1,0 +1,224 @@
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  animation: overlayIn 0.2s ease forwards;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #111;
+  border-radius: var(--radius-modal);
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  animation: sheetUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  border-top: 1px solid var(--border);
+}
+
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  margin: 12px auto 0;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+}
+
+.modal-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.modal-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.modal-close {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.modal-close:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.modal-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 20px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.modal-summary__items {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.modal-summary__sep {
+  color: var(--text-faint);
+}
+
+.modal-summary__total {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 0;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.phone-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #1E1E1E;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.phone-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.phone-prefix {
+  padding: 15px 12px 15px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  border-right: 1.5px solid var(--border);
+}
+
+.phone-input {
+  flex: 1;
+  background: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding-left: 12px;
+}
+
+.phone-input:focus {
+  box-shadow: none !important;
+}
+
+/* OTP Boxes */
+.otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.otp-box {
+  width: 48px;
+  height: 56px;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  caret-color: var(--accent);
+  transition: var(--transition);
+}
+
+.otp-box:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  outline: none;
+}
+
+.otp-resend {
+  text-align: center;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.otp-timer {
+  font-size: 0.82rem;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.modal-back {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  transition: var(--transition);
+}
+
+.modal-back:hover {
+  color: var(--text-muted);
+}

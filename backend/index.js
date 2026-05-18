@@ -31,10 +31,14 @@ app.get('/api/health', async (req, res, next) => {
 const authRoutes = require('./src/routes/authRoutes');
 const customerAuthRoutes = require('./src/routes/customerAuthRoutes');
 const restaurantRoutes = require('./src/routes/restaurantRoutes');
+const publicRoutes = require('./src/routes/publicRoutes');
+const orderRoutes = require('./src/routes/orderRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/customer/auth', customerAuthRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Catch all unhandled routes
 app.use((req, res, next) => {

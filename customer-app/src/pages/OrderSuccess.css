@@ -1,0 +1,201 @@
+@keyframes scaleIn {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes drawCircle {
+  from { stroke-dashoffset: 166; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes drawTick {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+.success-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+  padding: 40px 20px 40px;
+  gap: 20px;
+  background: var(--bg);
+}
+
+/* ─── Checkmark ──────────────────────────────────────────────── */
+.success-circle {
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+.success-check {
+  width: 96px;
+  height: 96px;
+}
+
+.success-check__circle {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: drawCircle 0.6s ease 0.4s forwards;
+  fill: rgba(249, 115, 22, 0.08);
+}
+
+.success-check__tick {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: drawTick 0.35s ease 0.9s forwards;
+}
+
+/* ─── Title ──────────────────────────────────────────────────── */
+.success-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+}
+
+.success-order-id {
+  font-size: 0.82rem;
+  color: var(--text-faint);
+  font-weight: 500;
+  letter-spacing: 1px;
+  background: var(--card-bg);
+  padding: 4px 12px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+}
+
+/* ─── Status Badge ───────────────────────────────────────────── */
+.status-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 28px;
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  transition: var(--transition);
+}
+
+.status-badge__label {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.status-badge__desc {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+.status--pending {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1.5px solid rgba(251, 191, 36, 0.4);
+  color: #FBBF24;
+}
+
+.status--accepted {
+  background: rgba(96, 165, 250, 0.12);
+  border: 1.5px solid rgba(96, 165, 250, 0.4);
+  color: #60A5FA;
+}
+
+.status--completed {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1.5px solid rgba(34, 197, 94, 0.4);
+  color: #22C55E;
+}
+
+.status--cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+}
+
+/* ─── Order Items ────────────────────────────────────────────── */
+.success-items {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.success-items__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.success-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.success-item__name {
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.success-item__meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.success-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* ─── Polling indicator ──────────────────────────────────────── */
+.success-polling {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+/* ─── Actions ────────────────────────────────────────────────── */
+.success-actions {
+  width: 100%;
+  max-width: 380px;
+  margin-top: auto;
+  padding-top: 8px;
+}
