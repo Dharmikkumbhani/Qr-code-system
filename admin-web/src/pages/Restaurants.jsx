@@ -130,8 +130,8 @@ const Restaurants = () => {
 
   const shareViaWhatsApp = () => {
     const currentTable = tables[activeSlide];
-    // Example URL schema: https://yourdomain.com/menu/slug?t=UUID
-    const url = `https://yourdomain.com${currentTable.qrCodeUrl}?t=${currentTable.id}`;
+    // Uses localhost for development testing
+    const url = `http://localhost:5173${currentTable.qrCodeUrl}?t=${currentTable.id}`;
     const text = encodeURIComponent(`Here is the QR link for ${currentTable.tableNumber} at ${selectedRest.name}:\n\n${url}`);
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -318,7 +318,7 @@ const Restaurants = () => {
                       <div className="qr-wrapper">
                         <QRCodeSVG 
                           id={`qr-${activeSlide}`}
-                          value={`https://yourdomain.com${tables[activeSlide].qrCodeUrl}?t=${tables[activeSlide].id}`} 
+                          value={`http://localhost:5173${tables[activeSlide].qrCodeUrl}?t=${tables[activeSlide].id}`} 
                           size={200}
                           level="H"
                           includeMargin={true}

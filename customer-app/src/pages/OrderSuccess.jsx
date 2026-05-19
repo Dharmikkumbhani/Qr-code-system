@@ -49,7 +49,7 @@ export default function OrderSuccess() {
   const shortId = orderId ? orderId.slice(-8).toUpperCase() : '—';
 
   const handleOrderMore = () => {
-    navigate(`/menu?restaurantSlug=${restaurantSlug}&tableId=${tableId}`);
+    navigate(`/menu/${restaurantSlug}?t=${tableId}`);
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { getPublicMenu } from '../api/index';
 import MenuItem from '../components/MenuItem';
 import CategoryTabs from '../components/CategoryTabs';
@@ -9,9 +9,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import './MenuPage.css';
 
 export default function MenuPage() {
+  const { slug: restaurantSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const restaurantSlug = searchParams.get('restaurantSlug');
-  const tableId = searchParams.get('tableId');
+  const tableId = searchParams.get('t') || searchParams.get('tableId');
 
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -146,6 +146,7 @@ export default function MenuPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         restaurantId={restaurant?.id}
+        restaurantSlug={restaurantSlug}
       />
     </div>
   );

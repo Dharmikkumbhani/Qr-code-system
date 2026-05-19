@@ -6,10 +6,10 @@ import { useCart } from '../context/CartContext';
 import LoadingSpinner from './LoadingSpinner';
 import './CheckoutModal.css';
 
-export default function CheckoutModal({ isOpen, onClose, restaurantId }) {
+export default function CheckoutModal({ isOpen, onClose, restaurantId, restaurantSlug }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tableId = searchParams.get('tableId');
+  const tableId = searchParams.get('t') || searchParams.get('tableId');
 
   const { setAuth } = useAuth();
   const { items, total, clearCart } = useCart();
@@ -136,7 +136,7 @@ export default function CheckoutModal({ isOpen, onClose, restaurantId }) {
 
       const { data: orderRes } = await placeOrder(orderPayload);
       clearCart();
-      navigate(`/order/${orderRes.data.id}?restaurantSlug=${searchParams.get('restaurantSlug')}&tableId=${tableId}`);
+      navigate(`/order/${orderRes.data.id}?restaurantSlug=${restaurantSlug}&tableId=${tableId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {

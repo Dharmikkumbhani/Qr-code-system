@@ -4,11 +4,9 @@ import { CartProvider } from './context/CartContext';
 import MenuPage from './pages/MenuPage';
 import OrderSuccess from './pages/OrderSuccess';
 
-// Redirect / → /menu keeping any existing query params
+// Redirect / → 404 since a slug is required
 function RootRedirect() {
-  const [searchParams] = useSearchParams();
-  const qs = searchParams.toString();
-  return <Navigate to={qs ? `/menu?${qs}` : '/menu'} replace />;
+  return <div>Please scan a valid restaurant QR code.</div>;
 }
 
 export default function App() {
@@ -18,7 +16,7 @@ export default function App() {
         <CartProvider>
           <Routes>
             <Route path="/" element={<RootRedirect />} />
-            <Route path="/menu" element={<MenuPage />} />
+            <Route path="/menu/:slug" element={<MenuPage />} />
             <Route path="/order/:orderId" element={<OrderSuccess />} />
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
