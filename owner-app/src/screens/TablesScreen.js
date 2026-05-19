@@ -52,7 +52,7 @@ const TablesScreen = () => (
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: Colors.bg },
-  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.xl },
+  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.huge },
 
   header: { marginBottom: Spacing.xl },
   headerTitle: { color: Colors.textPrimary, fontSize: Typography.xxl, fontWeight: Typography.bold },

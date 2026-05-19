@@ -47,7 +47,7 @@ const MenuScreen = () => (
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: Colors.bg },
-  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.xl },
+  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.huge },
 
   header: {
     flexDirection: 'row',
