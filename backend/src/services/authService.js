@@ -43,7 +43,10 @@ exports.registerUser = async (data) => {
 
 exports.loginUser = async (email, password) => {
   // Check if user exists
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ 
+    where: { email },
+    include: { restaurants: { select: { id: true, name: true, slug: true } } }
+  });
   if (!user) {
     throw new AppError('Incorrect email or password', 401);
   }

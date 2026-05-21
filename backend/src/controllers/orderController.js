@@ -83,6 +83,11 @@ exports.placeOrder = async (req, res, next) => {
       return newOrder;
     });
 
+    // Emit socket event to the restaurant's room
+    if (req.io) {
+      req.io.to(`restaurant_${restaurantId}`).emit('newOrder', order);
+    }
+
     return sendSuccess(res, 201, 'Order placed successfully', order);
   } catch (error) {
     next(error);

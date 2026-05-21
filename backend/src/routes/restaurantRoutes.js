@@ -21,4 +21,11 @@ router.route('/:id/tables')
 const menuRoutes = require('./menuRoutes');
 router.use('/:restaurantId/menu', menuRoutes);
 
+// Orders Management
+router.route('/:id/orders')
+  .get(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.getRestaurantOrders);
+
+router.route('/:id/orders/:orderId/status')
+  .patch(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.updateOrderStatus);
+
 module.exports = router;

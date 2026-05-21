@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const http = require('http');
+const { Server } = require('socket.io');
 
 // Load env variables
 dotenv.config();
@@ -11,7 +13,36 @@ const errorHandler = require('./src/middlewares/errorHandler');
 const AppError = require('./src/utils/errors');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // allow all origins for now
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"]
+  }
+});
+
 const PORT = process.env.PORT || 8081;
+
+// Make io accessible to routers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log(`User connected to socket: ${socket.id}`);
+  
+  // Clients can join a room based on restaurantId to get specific orders
+  socket.on('joinRestaurant', (restaurantId) => {
+    socket.join(`restaurant_${restaurantId}`);
+    console.log(`Socket ${socket.id} joined room restaurant_${restaurantId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
 
 // Middlewares
 app.use(cors());
@@ -48,6 +79,6 @@ app.use((req, res, next) => {
 // Global Error Handler Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

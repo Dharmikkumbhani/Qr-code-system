@@ -133,3 +133,81 @@ exports.generateTables = async (req, res, next) => {
     next(error);
   }
 };
+
+// GET orders for a restaurant (Owner)
+exports.getRestaurantOrders = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user is owner of this restaurant (unless SUPER_ADMIN)
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const restaurant = await prisma.restaurant.findUnique({ where: { id } });
+      if (!restaurant || restaurant.ownerId !== req.user.id) {
+        return next(new AppError('Not authorized to access this restaurant', 403));
+      }
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { restaurantId: id },
+      include: {
+        table: { select: { tableNumber: true } },
+        orderItems: {
+          include: {
+            menuItem: { select: { name: true, price: true, imageUrl: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return sendSuccess(res, 200, 'Orders fetched successfully', orders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PATCH update order status
+exports.updateOrderStatus = async (req, res, next) => {
+  try {
+    const { id, orderId } = req.params;
+    const { status, paymentStatus } = req.body;
+
+    // Check if user is owner of this restaurant (unless SUPER_ADMIN)
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const restaurant = await prisma.restaurant.findUnique({ where: { id } });
+      if (!restaurant || restaurant.ownerId !== req.user.id) {
+        return next(new AppError('Not authorized to access this restaurant', 403));
+      }
+    }
+
+    const data = {};
+    if (status) data.status = status;
+    if (paymentStatus) data.paymentStatus = paymentStatus;
+
+    if (Object.keys(data).length === 0) {
+      return next(new AppError('No status provided to update', 400));
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId, restaurantId: id },
+      data,
+      include: {
+        table: { select: { tableNumber: true } },
+        orderItems: {
+          include: {
+            menuItem: { select: { name: true, price: true, imageUrl: true } }
+          }
+        }
+      }
+    });
+
+    // Emit socket event for order status update
+    if (req.io) {
+      req.io.to(`restaurant_${id}`).emit('orderUpdated', updatedOrder);
+    }
+
+    return sendSuccess(res, 200, 'Order updated successfully', updatedOrder);
+  } catch (error) {
+    next(error);
+  }
+};
