@@ -84,6 +84,14 @@ exports.getTables = async (req, res, next) => {
     const { id } = req.params;
     const tables = await prisma.table.findMany({
       where: { restaurantId: id },
+      include: {
+        orders: {
+          where: {
+            status: { in: ['PENDING', 'ACCEPTED'] }
+          },
+          take: 1
+        }
+      },
       orderBy: { tableNumber: 'asc' }
     });
     return sendSuccess(res, 200, 'Tables fetched successfully', tables);

@@ -1,62 +1,149 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSystem';
+import api from '../services/api';
+import { getStoredUser } from '../services/authService';
+import { initiateSocketConnection, disconnectSocket } from '../services/socket';
 
-const STATUS = [
-  { label: 'Free',     count: '--', color: Colors.success, bg: Colors.successBg },
-  { label: 'Occupied', count: '--', color: Colors.error,   bg: Colors.errorBg   },
-  { label: 'Total',    count: '--', color: Colors.info,    bg: Colors.infoBg    },
-];
+const TablesScreen = ({ navigation }) => {
+  const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [restaurantId, setRestaurantId] = useState(null);
 
-const TablesScreen = () => (
-  <SafeAreaView style={styles.safe}>
-    <View style={styles.container}>
+  useEffect(() => {
+    const initialize = async () => {
+      const user = await getStoredUser();
+      if (user?.restaurants && user.restaurants.length > 0) {
+        const rId = user.restaurants[0].id;
+        setRestaurantId(rId);
+        fetchTables(rId);
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tables</Text>
-        <Text style={styles.headerSub}>Live floor overview</Text>
-      </View>
+        // Optional: We can listen to socket events to live-update table occupation
+        const socket = initiateSocketConnection(rId);
+        
+        socket.on('newOrder', () => {
+          fetchTables(rId); // Re-fetch to update table occupation
+        });
+        socket.on('orderUpdated', () => {
+          fetchTables(rId); // Re-fetch to update table occupation if completed
+        });
 
-      {/* Status summary */}
-      <View style={styles.statusRow}>
-        {STATUS.map((s) => (
-          <View key={s.label} style={[styles.statusCard, { backgroundColor: s.bg, borderColor: s.color + '40' }]}>
-            <Text style={[styles.statusCount, { color: s.color }]}>{s.count}</Text>
-            <Text style={[styles.statusLabel, { color: s.color }]}>{s.label}</Text>
-          </View>
-        ))}
-      </View>
+      } else {
+        setLoading(false);
+      }
+    };
+    initialize();
 
-      {/* Table grid placeholder */}
-      <View style={styles.gridLabel}>
-        <Text style={styles.gridLabelText}>Floor Plan</Text>
-      </View>
-      <View style={styles.grid}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <View key={i} style={styles.tableCell}>
-            <Text style={styles.tableCellNum}>{i + 1}</Text>
-          </View>
-        ))}
-      </View>
+    // No need to disconnect socket here since it's shared, or we can just leave it to DashboardScreen to manage.
+  }, []);
 
-      <View style={styles.emptyState}>
-        <Text style={styles.emptySub}>Live table status comes in Phase 6.</Text>
-        <View style={styles.phaseTag}>
-          <Text style={styles.phaseTagText}>PHASE 6</Text>
+  const fetchTables = async (rId) => {
+    try {
+      const response = await api.get(`/restaurants/${rId}/tables`);
+      if (response.data.success) {
+        setTables(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tables:', error);
+      Alert.alert('Error', 'Could not load tables.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const occupiedCount = tables.filter(t => t.orders && t.orders.length > 0).length;
+  const freeCount = tables.length - occupiedCount;
+
+  const STATUS = [
+    { label: 'Free',     count: freeCount, color: Colors.success, bg: Colors.successBg },
+    { label: 'Occupied', count: occupiedCount, color: Colors.error,   bg: Colors.errorBg   },
+    { label: 'Total',    count: tables.length, color: Colors.info,    bg: Colors.infoBg    },
+  ];
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Tables</Text>
+          <Text style={styles.headerSub}>Live floor overview</Text>
         </View>
+
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : (
+          <>
+            {/* Status summary */}
+            <View style={styles.statusRow}>
+              {STATUS.map((s) => (
+                <View key={s.label} style={[styles.statusCard, { backgroundColor: s.bg, borderColor: s.color + '40' }]}>
+                  <Text style={[styles.statusCount, { color: s.color }]}>{s.count}</Text>
+                  <Text style={[styles.statusLabel, { color: s.color }]}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Table grid */}
+            <View style={styles.gridLabel}>
+              <Text style={styles.gridLabelText}>Floor Plan</Text>
+            </View>
+
+            {tables.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptySub}>No tables configured for this restaurant.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={tables}
+                keyExtractor={(item) => item.id}
+                numColumns={4}
+                columnWrapperStyle={{ gap: 12 }}
+                contentContainerStyle={{ gap: 12, paddingBottom: Spacing.xxl }}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const isOccupied = item.orders && item.orders.length > 0;
+                  // If occupied, maybe we want to allow tapping to go to Dashboard/Orders? 
+                  // For now, we just show it.
+                  return (
+                    <TouchableOpacity 
+                      activeOpacity={isOccupied ? 0.8 : 1}
+                      onPress={() => {
+                        if (isOccupied) {
+                          navigation.navigate('Dashboard', { screen: 'OrderList' });
+                        }
+                      }}
+                      style={[
+                        styles.tableCell,
+                        isOccupied ? styles.tableOccupied : styles.tableFree
+                      ]}
+                    >
+                      <Text style={[styles.tableCellNum, isOccupied && { color: '#fff' }]}>
+                        {item.tableNumber.replace('Table ', '')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+          </>
+        )}
       </View>
-    </View>
-  </SafeAreaView>
-);
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: Colors.bg },
-  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.huge },
+  container: { flex: 1, paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
 
   header: { marginBottom: Spacing.xl },
   headerTitle: { color: Colors.textPrimary, fontSize: Typography.xxl, fontWeight: Typography.bold },
   headerSub:   { color: Colors.textSecondary, fontSize: Typography.sm, marginTop: 2 },
+
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   statusRow: { flexDirection: 'row', gap: 10, marginBottom: Spacing.xxl },
   statusCard: {
@@ -67,29 +154,33 @@ const styles = StyleSheet.create({
   statusCount: { fontSize: Typography.xxl, fontWeight: Typography.bold, marginBottom: 2 },
   statusLabel: { fontSize: Typography.xs, fontWeight: Typography.semibold },
 
-  gridLabel: { marginBottom: Spacing.sm },
+  gridLabel: { marginBottom: Spacing.md },
   gridLabelText: { color: Colors.textSecondary, fontSize: Typography.xs, fontWeight: Typography.semibold, letterSpacing: 1, textTransform: 'uppercase' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xxl },
   tableCell: {
-    width: '22%',
+    flex: 1, // makes it grow equally
     aspectRatio: 1,
-    backgroundColor: Colors.surface,
     borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.border,
+    borderWidth: 1, 
     justifyContent: 'center', alignItems: 'center',
     ...Shadows.sm,
   },
-  tableCellNum: { color: Colors.textMuted, fontSize: Typography.md, fontWeight: Typography.bold },
-
-  emptyState: { alignItems: 'center' },
-  emptySub: { color: Colors.textSecondary, fontSize: Typography.sm, textAlign: 'center', marginBottom: 12 },
-  phaseTag: {
-    backgroundColor: Colors.primaryGlow, borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.primary,
-    paddingHorizontal: 16, paddingVertical: 4,
+  tableFree: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.success,
   },
-  phaseTagText: { color: Colors.primary, fontSize: Typography.xs, fontWeight: Typography.bold, letterSpacing: 2 },
+  tableOccupied: {
+    backgroundColor: Colors.error,
+    borderColor: Colors.error,
+  },
+  tableCellNum: { 
+    color: Colors.textPrimary, 
+    fontSize: Typography.lg, 
+    fontWeight: Typography.bold 
+  },
+
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptySub: { color: Colors.textSecondary, fontSize: Typography.sm, textAlign: 'center' },
 });
 
 export default TablesScreen;

@@ -14,7 +14,7 @@ const NotifBell = ({ hasNew }) => (
   </TouchableOpacity>
 );
 
-const OrderCard = ({ order, onUpdateStatus }) => {
+const OrderCard = ({ order, onUpdateStatus, onPress }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'PENDING': return Colors.warning;
@@ -34,7 +34,7 @@ const OrderCard = ({ order, onUpdateStatus }) => {
   const timeElapsed = new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View style={styles.orderCard}>
+    <TouchableOpacity style={styles.orderCard} activeOpacity={0.8} onPress={onPress}>
       <View style={styles.orderHeader}>
         <View style={styles.tableBadge}>
           <Text style={styles.tableBadgeText}>{order.table?.tableNumber || 'Table --'}</Text>
@@ -71,11 +71,11 @@ const OrderCard = ({ order, onUpdateStatus }) => {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState(null);
@@ -185,7 +185,11 @@ const DashboardScreen = () => {
             data={activeOrders}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <OrderCard order={item} onUpdateStatus={updateOrderStatus} />
+              <OrderCard 
+                order={item} 
+                onUpdateStatus={updateOrderStatus}
+                onPress={() => navigation.navigate('OrderDetail', { order: item })}
+              />
             )}
             contentContainerStyle={{ paddingBottom: Spacing.xxl }}
             showsVerticalScrollIndicator={false}

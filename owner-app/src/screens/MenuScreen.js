@@ -1,104 +1,243 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, ActivityIndicator, Switch, ScrollView, Alert } from 'react-native';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSystem';
+import api from '../services/api';
+import { getStoredUser } from '../services/authService';
 
-const MenuScreen = () => (
-  <SafeAreaView style={styles.safe}>
-    <View style={styles.container}>
+const MenuScreen = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [restaurantId, setRestaurantId] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('All');
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Menu</Text>
-          <Text style={styles.headerSub}>Manage item availability</Text>
+  useEffect(() => {
+    const initialize = async () => {
+      const user = await getStoredUser();
+      if (user?.restaurants && user.restaurants.length > 0) {
+        const rId = user.restaurants[0].id;
+        setRestaurantId(rId);
+        fetchMenu(rId);
+      } else {
+        setLoading(false);
+      }
+    };
+    initialize();
+  }, []);
+
+  const fetchMenu = async (rId) => {
+    try {
+      const response = await api.get(`/restaurants/${rId}/menu`);
+      if (response.data.success) {
+        setCategories(response.data.data.categories);
+      }
+    } catch (error) {
+      console.error('Failed to fetch menu:', error);
+      Alert.alert('Error', 'Could not load menu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAvailability = async (item) => {
+    // Optimistic update
+    const updatedCategories = categories.map(cat => ({
+      ...cat,
+      menuItems: cat.menuItems.map(m => 
+        m.id === item.id ? { ...m, isAvailable: !m.isAvailable } : m
+      )
+    }));
+    setCategories(updatedCategories);
+
+    try {
+      await api.put(`/restaurants/${restaurantId}/menu/items/${item.id}`, {
+        isAvailable: !item.isAvailable
+      });
+    } catch (error) {
+      console.error('Failed to update availability:', error);
+      // Revert on error
+      fetchMenu(restaurantId);
+      Alert.alert('Error', 'Failed to update item status');
+    }
+  };
+
+  // Flatten items for "All" view or filter by active category
+  const displayedItems = activeCategory === 'All' 
+    ? categories.flatMap(c => c.menuItems)
+    : categories.find(c => c.id === activeCategory)?.menuItems || [];
+
+  const renderItem = ({ item }) => (
+    <View style={styles.itemCard}>
+      <View style={styles.itemInfo}>
+        <View style={styles.titleRow}>
+          {item.isVeg ? (
+            <View style={[styles.vegBadge, { borderColor: Colors.success }]}><View style={[styles.vegDot, { backgroundColor: Colors.success }]} /></View>
+          ) : (
+            <View style={[styles.vegBadge, { borderColor: Colors.error }]}><View style={[styles.vegDot, { backgroundColor: Colors.error }]} /></View>
+          )}
+          <Text style={styles.itemName}>{item.name}</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
+        <Text style={styles.itemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
       </View>
-
-      {/* Search bar mock */}
-      <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <Text style={styles.searchPlaceholder}>Search menu items…</Text>
-      </View>
-
-      {/* Category pills mock */}
-      <View style={styles.pillRow}>
-        {['All', 'Starters', 'Mains', 'Drinks', 'Desserts'].map((cat, i) => (
-          <View key={cat} style={[styles.pill, i === 0 && styles.pillActive]}>
-            <Text style={[styles.pillText, i === 0 && styles.pillTextActive]}>{cat}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Empty state */}
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>🍽️</Text>
-        <Text style={styles.emptyTitle}>Menu Management</Text>
-        <Text style={styles.emptySub}>Toggle item availability and{'\n'}manage your menu. Coming in Phase 6.</Text>
-        <View style={styles.phaseTag}>
-          <Text style={styles.phaseTagText}>PHASE 6</Text>
-        </View>
+      <View style={styles.itemActions}>
+        <Text style={[styles.statusText, { color: item.isAvailable ? Colors.success : Colors.error }]}>
+          {item.isAvailable ? 'In Stock' : 'Out of Stock'}
+        </Text>
+        <Switch
+          value={item.isAvailable}
+          onValueChange={() => toggleAvailability(item)}
+          trackColor={{ false: Colors.border, true: Colors.success + '80' }}
+          thumbColor={item.isAvailable ? Colors.success : Colors.textMuted}
+        />
       </View>
     </View>
-  </SafeAreaView>
-);
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Menu</Text>
+            <Text style={styles.headerSub}>Manage item availability</Text>
+          </View>
+        </View>
+
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : categories.length === 0 ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No menu categories found.</Text>
+          </View>
+        ) : (
+          <>
+            {/* Category pills */}
+            <View style={styles.pillContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
+                <TouchableOpacity 
+                  style={[styles.pill, activeCategory === 'All' && styles.pillActive]}
+                  onPress={() => setActiveCategory('All')}
+                >
+                  <Text style={[styles.pillText, activeCategory === 'All' && styles.pillTextActive]}>All Items</Text>
+                </TouchableOpacity>
+                {categories.map((cat) => (
+                  <TouchableOpacity 
+                    key={cat.id} 
+                    style={[styles.pill, activeCategory === cat.id && styles.pillActive]}
+                    onPress={() => setActiveCategory(cat.id)}
+                  >
+                    <Text style={[styles.pillText, activeCategory === cat.id && styles.pillTextActive]}>{cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Menu Items List */}
+            <FlatList
+              data={displayedItems}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingBottom: Spacing.xxl }}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centered}>
+                  <Text style={styles.emptyText}>No items in this category.</Text>
+                </View>
+              }
+            />
+          </>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: Colors.bg },
-  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.huge },
+  container: { flex: 1, paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   headerTitle: { color: Colors.textPrimary, fontSize: Typography.xxl, fontWeight: Typography.bold },
   headerSub:   { color: Colors.textSecondary, fontSize: Typography.sm, marginTop: 2 },
-  addBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingHorizontal: 14, paddingVertical: 8,
-    ...Shadows.glow(),
-  },
-  addBtnText: { color: Colors.white, fontSize: Typography.sm, fontWeight: Typography.bold },
+  
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: Colors.textSecondary, fontSize: Typography.md },
 
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.border,
-    paddingHorizontal: Spacing.md, height: 48,
+  pillContainer: {
     marginBottom: Spacing.lg,
   },
-  searchIcon:        { fontSize: 16, marginRight: 8 },
-  searchPlaceholder: { color: Colors.textMuted, fontSize: Typography.sm },
-
-  pillRow: { flexDirection: 'row', gap: 8, marginBottom: Spacing.xxl },
+  pillRow: { 
+    flexDirection: 'row', 
+    gap: 8, 
+    paddingRight: Spacing.xl 
+  },
   pill: {
-    paddingHorizontal: 14, paddingVertical: 6,
+    paddingHorizontal: 16, paddingVertical: 8,
     backgroundColor: Colors.surface,
     borderRadius: Radius.full,
     borderWidth: 1, borderColor: Colors.border,
   },
   pillActive:      { backgroundColor: Colors.primaryGlow, borderColor: Colors.primary },
-  pillText:        { color: Colors.textSecondary, fontSize: Typography.xs, fontWeight: Typography.medium },
-  pillTextActive:  { color: Colors.primary, fontWeight: Typography.semibold },
+  pillText:        { color: Colors.textSecondary, fontSize: Typography.sm, fontWeight: Typography.medium },
+  pillTextActive:  { color: Colors.primary, fontWeight: Typography.bold },
 
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 60 },
-  emptyIcon:  { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { color: Colors.textPrimary, fontSize: Typography.xl, fontWeight: Typography.bold, marginBottom: 8 },
-  emptySub:   { color: Colors.textSecondary, fontSize: Typography.sm, textAlign: 'center', lineHeight: 22 },
-  phaseTag: {
-    marginTop: 20,
-    backgroundColor: Colors.primaryGlow, borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.primary,
-    paddingHorizontal: 16, paddingVertical: 4,
+  itemCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1, borderColor: Colors.border,
+    ...Shadows.sm,
   },
-  phaseTagText: { color: Colors.primary, fontSize: Typography.xs, fontWeight: Typography.bold, letterSpacing: 2 },
+  itemInfo: {
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  vegBadge: {
+    width: 12, height: 12,
+    borderWidth: 1,
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 2,
+  },
+  vegDot: {
+    width: 6, height: 6,
+    borderRadius: 3,
+  },
+  itemName: {
+    fontSize: Typography.md,
+    fontWeight: Typography.bold,
+    color: Colors.textPrimary,
+  },
+  itemPrice: {
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
+    fontWeight: Typography.medium,
+    marginLeft: 20, // Align with text
+  },
+  itemActions: {
+    alignItems: 'flex-end',
+  },
+  statusText: {
+    fontSize: Typography.xs,
+    fontWeight: Typography.bold,
+    marginBottom: 4,
+  }
 });
 
 export default MenuScreen;
