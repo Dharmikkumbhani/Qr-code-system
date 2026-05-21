@@ -74,7 +74,7 @@ const ProfileScreen = () => {
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: Colors.bg },
-  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.xl },
+  container: { flex: 1, paddingHorizontal: Spacing.xxl, paddingTop: Spacing.huge },
 
   headerTitle: { color: Colors.textPrimary, fontSize: Typography.xxl, fontWeight: Typography.bold, marginBottom: Spacing.xl },
 

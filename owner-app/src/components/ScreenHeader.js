@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xxl,
-    paddingTop: Platform.OS === 'android' ? Spacing.xl : Spacing.md,
+    paddingTop: Platform.OS === 'android' ? Spacing.huge : Spacing.xxl,
     paddingBottom: Spacing.lg,
     backgroundColor: Colors.bg,
     borderBottomWidth: 1,

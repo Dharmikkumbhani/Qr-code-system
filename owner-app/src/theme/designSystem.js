@@ -1,115 +1,113 @@
 /**
  * RestaurantOS Design System
- * ─────────────────────────────────────────────────────────────
- * Single source of truth for all colors, typography, spacing,
- * shadows and border radii used across the Owner App.
+ * Single source of truth for colors, typography, spacing, shadows, and radii.
  */
 
 export const Colors = {
   // Brand
-  primary:      '#FF6B35',   // main orange
-  primaryLight: '#FF8C5A',   // hover / active
-  primaryDark:  '#E5521C',   // pressed
-  primaryGlow:  'rgba(255,107,53,0.20)', // shadow tint
+  primary: '#F97316',
+  primaryLight: '#FDBA74',
+  primaryDark: '#C2410C',
+  primaryGlow: 'rgba(249,115,22,0.12)',
 
-  // Backgrounds (dark-first)
-  bg:         '#0A0A0F',   // deepest — screen bg
-  surface:    '#12121A',   // cards, sheets
-  surfaceAlt: '#1A1A26',   // elevated card bg
-  border:     '#252535',   // subtle dividers
-  borderFocus:'#FF6B35',   // focused input ring
+  // Backgrounds
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  borderFocus: '#F97316',
 
   // Text
-  textPrimary:   '#F0F0FA',   // headings
-  textSecondary: '#8888AA',   // labels, captions
-  textMuted:     '#44445A',   // placeholder, hint
-  textInverse:   '#0A0A0F',  // on primary btn
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
 
   // Status
-  success:  '#2DD4BF',
-  warning:  '#FBBF24',
-  error:    '#F87171',
-  info:     '#60A5FA',
+  success: '#0F766E',
+  warning: '#B45309',
+  error: '#DC2626',
+  info: '#2563EB',
 
-  // Status bg
-  successBg: 'rgba(45,212,191,0.12)',
-  warningBg: 'rgba(251,191,36,0.12)',
-  errorBg:   'rgba(248,113,113,0.12)',
-  infoBg:    'rgba(96,165,250,0.12)',
+  // Status backgrounds
+  successBg: '#CCFBF1',
+  warningBg: '#FEF3C7',
+  errorBg: '#FEE2E2',
+  infoBg: '#DBEAFE',
 
   // Misc
-  white:       '#FFFFFF',
-  black:       '#000000',
+  white: '#FFFFFF',
+  black: '#000000',
   transparent: 'transparent',
-  overlay:     'rgba(0,0,0,0.65)',
+  overlay: 'rgba(15,23,42,0.35)',
 };
 
 export const Typography = {
   // Sizes
-  xs:   11,
-  sm:   13,
-  md:   15,
-  lg:   17,
-  xl:   20,
-  xxl:  24,
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 17,
+  xl: 20,
+  xxl: 24,
   xxxl: 30,
   hero: 38,
 
   // Weights (use as fontWeight strings)
-  regular:     '400',
-  medium:      '500',
-  semibold:    '600',
-  bold:        '700',
-  extrabold:   '800',
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  extrabold: '800',
 };
 
 export const Spacing = {
-  xs:  4,
-  sm:  8,
-  md:  12,
-  lg:  16,
-  xl:  20,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
   xxl: 24,
-  xxxl:32,
+  xxxl: 32,
   huge: 48,
 };
 
 export const Radius = {
-  xs:   6,
-  sm:   10,
-  md:   14,
-  lg:   18,
-  xl:   24,
+  xs: 6,
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 24,
   full: 999,
 };
 
 export const Shadows = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOpacity: 0.10,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  glow: (color = '#FF6B35') => ({
+  glow: (color = '#F97316') => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 6,
   }),
 };

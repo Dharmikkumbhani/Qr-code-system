@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
 import { Colors, Typography, Shadows } from '../theme/designSystem';
 
 /**
@@ -27,8 +27,6 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
-
       <Animated.View style={[styles.content, { opacity: fade }]}>
         {/* Logo */}
         <Animated.View style={[styles.logoRing, { transform: [{ scale: pulse }] }]}>

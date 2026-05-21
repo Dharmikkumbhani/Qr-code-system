@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   Alert,
   Animated,
 } from 'react-native';
@@ -85,7 +84,7 @@ const LoginScreen = () => {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Incorrect email or password.';
+      const msg = err?.response?.data?.message || err.message || 'Incorrect email or password.';
       Alert.alert('Sign In Failed', msg);
     } finally {
       setLoading(false);
@@ -94,7 +93,6 @@ const LoginScreen = () => {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -208,7 +206,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: Colors.bg,
     paddingHorizontal: Spacing.xxl,
-    paddingTop: 56,
+    paddingTop: 76,
     paddingBottom: 32,
   },
 

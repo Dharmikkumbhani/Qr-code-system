@@ -1,5 +1,8 @@
 import api from './api';
-import * as Keychain from 'react-native-keychain';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TOKEN_KEY = 'ownerToken';
+const USER_KEY = 'ownerUser';
 
 // Login owner with email + password
 // Backend response: { success, message, data: { user, token } }
@@ -7,26 +10,25 @@ export const loginOwner = async (email, password) => {
   const response = await api.post('/auth/login', { email, password });
   const { user, token } = response.data.data;
   if (token) {
-    // Store token securely in keychain
-    await Keychain.setGenericPassword('ownerToken', token);
-    // Store user data in keychain as well
-    await Keychain.setGenericPassword('ownerUser', JSON.stringify(user), { service: 'ownerUser' });
+    await AsyncStorage.multiSet([
+      [TOKEN_KEY, token],
+      [USER_KEY, JSON.stringify(user)],
+    ]);
   }
   return { user, token };
 };
 
 // Logout - clear token and user data
 export const logoutOwner = async () => {
-  await Keychain.resetGenericPassword();
-  await Keychain.resetGenericPassword({ service: 'ownerUser' });
+  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
 };
 
 // Get cached user from storage (no network call)
 export const getStoredUser = async () => {
   try {
-    const credentials = await Keychain.getGenericPassword({ service: 'ownerUser' });
-    if (credentials) {
-      return JSON.parse(credentials.password);
+    const storedUser = await AsyncStorage.getItem(USER_KEY);
+    if (storedUser) {
+      return JSON.parse(storedUser);
     }
     return null;
   } catch (error) {
@@ -37,11 +39,7 @@ export const getStoredUser = async () => {
 // Get stored token from keychain
 export const getStoredToken = async () => {
   try {
-    const credentials = await Keychain.getGenericPassword();
-    if (credentials) {
-      return credentials.password;
-    }
-    return null;
+    return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
     return null;
   }

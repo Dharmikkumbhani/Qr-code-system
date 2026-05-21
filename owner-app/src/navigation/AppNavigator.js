@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { Colors } from '../theme/designSystem';
 
 import SplashScreen  from '../screens/SplashScreen';
 import LoginScreen   from '../screens/LoginScreen';
@@ -31,7 +32,7 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
           animation: 'fade',           // smooth transition between auth states
-          contentStyle: { backgroundColor: '#0A0A0F' },
+          contentStyle: { backgroundColor: Colors.bg },
         }}
       >
         {user ? (
