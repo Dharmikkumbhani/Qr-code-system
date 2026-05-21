@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
 // Change this to your backend IP when testing on a physical device
-const SOCKET_URL = 'http://10.140.193.133:8081';
+const SOCKET_URL = 'http://10.189.171.56:8081';
 
 let socket;
 

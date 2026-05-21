@@ -1,7 +1,11 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, LogBox } from 'react-native';
+import Constants from 'expo-constants';
 import api from './api';
+
+// Ignore the specific expo-notifications warning in Expo Go
+LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 
 // Configure how notifications should appear when app is in foreground
 Notifications.setNotificationHandler({
@@ -37,7 +41,14 @@ export async function registerForPushNotificationsAsync() {
     }
     // Learn more about projectId: https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
     try {
-      token = (await Notifications.getExpoPushTokenAsync()).data;
+      if (Constants.appOwnership === 'expo') {
+        console.log('Push notifications are not supported in Expo Go on Android. Skipping push token registration.');
+        return;
+      }
+
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
+      })).data;
       console.log('Expo Push Token:', token);
       
       // Send token to our backend
