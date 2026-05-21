@@ -1,339 +1,233 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, Loader2, AlertCircle, QrCode } from 'lucide-react';
+import { Lock, Mail, Loader2, AlertCircle, QrCode, Eye, EyeOff } from 'lucide-react';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
+export default function Login() {
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [showPw, setShowPw]     = useState(false);
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
+  const { login, isAuthenticated } = useAuth();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  if (isAuthenticated) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    if (!email || !password) {
-      setError('Please fill in all fields.');
-      return;
-    }
-
-    setIsLoading(true);
+    if (!email || !password) { setError('Please fill in all fields.'); return; }
+    setLoading(true);
     const result = await login(email, password);
-    setIsLoading(false);
-
+    setLoading(false);
     if (result.success) {
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      navigate(location.state?.from?.pathname || '/', { replace: true });
     } else {
-      setError(result.message || 'Invalid email or password.');
+      setError(result.message || 'Invalid credentials.');
     }
   };
 
   return (
-    <div className="login-wrapper">
-      {/* Left Side: Form */}
-      <div className="login-form-container">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="brand">
-              <QrCode size={32} color="var(--primary-color)" />
-              <h2 className="brand-text">PetPooja-QR</h2>
-            </div>
-            <h1 className="title">Welcome Back</h1>
-            <p className="subtitle">Sign in to manage your restaurant operations</p>
+    <div style={s.page}>
+      {/* Left Panel */}
+      <div style={s.left}>
+        <div style={s.card}>
+          {/* Logo */}
+          <div style={s.logo}>
+            <div style={s.logoIcon}><QrCode size={22} color="#fff" /></div>
+            <span style={s.logoText}>PetPooja QR</span>
           </div>
 
+          <h1 style={s.heading}>Welcome back 👋</h1>
+          <p style={s.sub}>Sign in to your admin panel</p>
+
           {error && (
-            <div className="error-box">
-              <AlertCircle size={18} />
-              <span>{error}</span>
+            <div className="alert alert-error">
+              <AlertCircle size={16} />
+              {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="label" htmlFor="email">Email address</label>
-              <div className="input-wrapper">
-                <Mail className="input-icon" />
+          <form onSubmit={handleSubmit} style={s.form}>
+            {/* Email */}
+            <div style={s.field}>
+              <label style={s.label} htmlFor="login-email">Email / Username</label>
+              <div style={s.inputWrap}>
+                <Mail size={16} style={s.inputIcon} />
                 <input
-                  id="email"
+                  id="login-email"
                   type="text"
-                  placeholder="admin"
+                  placeholder="admin@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-field"
-                  disabled={isLoading}
+                  onChange={e => setEmail(e.target.value)}
+                  style={s.input}
+                  disabled={loading}
+                  autoComplete="username"
                   required
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="label" htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <Lock className="input-icon" />
+            {/* Password */}
+            <div style={s.field}>
+              <label style={s.label} htmlFor="login-password">Password</label>
+              <div style={s.inputWrap}>
+                <Lock size={16} style={s.inputIcon} />
                 <input
-                  id="password"
-                  type="password"
+                  id="login-password"
+                  type={showPw ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-field"
-                  disabled={isLoading}
+                  onChange={e => setPassword(e.target.value)}
+                  style={{ ...s.input, paddingRight: '40px' }}
+                  disabled={loading}
+                  autoComplete="current-password"
                   required
                 />
+                <button
+                  type="button"
+                  style={s.eyeBtn}
+                  onClick={() => setShowPw(v => !v)}
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              className={`submit-button ${isLoading ? 'loading' : ''}`}
-              disabled={isLoading}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '11px', marginTop: '8px' }}
+              disabled={loading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 size={18} className="spinner" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
+              {loading ? <><Loader2 size={16} className="spin" /> Signing in...</> : 'Sign In'}
             </button>
           </form>
         </div>
       </div>
 
-      {/* Right Side: Visual (Hidden on mobile) */}
-      <div className="login-visual-container">
-        <div className="visual-content">
-          <h1>Manage Your Orders Seamlessly</h1>
-          <p>Scan, Order, and Serve faster than ever before. Join the next generation of restaurant management.</p>
+      {/* Right Panel (desktop only) */}
+      <div style={s.right}>
+        <div style={s.rightContent}>
+          <div style={s.rightIcon}><QrCode size={48} color="rgba(255,255,255,0.9)" /></div>
+          <h2 style={s.rightH2}>Restaurant Management,<br/>Simplified.</h2>
+          <p style={s.rightP}>
+            Manage menus, generate QR codes for every table,<br />
+            and track orders in real-time — all from one place.
+          </p>
+          <div style={s.features}>
+            {['QR Code Generation', 'Menu Management', 'Real-time Orders', 'Multi-restaurant'].map(f => (
+              <div key={f} style={s.feature}>
+                <span style={s.featureDot} />
+                {f}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Internal CSS for Login Page Specifics */}
-      <style>
-        {`
-          .login-wrapper {
-            display: flex;
-            min-height: 100vh;
-            width: 100vw;
-            background-color: var(--bg-color);
-          }
-
-          /* Mobile-first: Full width form, centered */
-          .login-form-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-          }
-
-          .login-visual-container {
-            display: none; /* Hidden on mobile */
-          }
-
-          /* Desktop Override */
-          @media (min-width: 1024px) {
-            .login-wrapper {
-              flex-direction: row;
-            }
-            .login-form-container {
-              flex: 0 0 50%;
-              /* Push form to left side */
-              justify-content: flex-start;
-              padding-left: 10%;
-            }
-            .login-visual-container {
-              flex: 0 0 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: linear-gradient(135deg, var(--bg-color) 0%, var(--surface-color) 100%);
-              border-left: 1px solid var(--border-color);
-              position: relative;
-              overflow: hidden;
-            }
-            
-            /* Add some decorative abstract shapes to the right side */
-            .login-visual-container::before {
-              content: '';
-              position: absolute;
-              top: -10%;
-              right: -10%;
-              width: 500px;
-              height: 500px;
-              border-radius: 50%;
-              background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%);
-            }
-          }
-
-          .login-card {
-            width: 100%;
-            max-width: 420px;
-          }
-
-          .login-header {
-            margin-bottom: 2rem;
-          }
-
-          .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-          }
-
-          .brand-text {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.5px;
-          }
-
-          .title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.5px;
-          }
-
-          .subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-          }
-
-          .form-group {
-            margin-bottom: 1.5rem;
-          }
-
-          .label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-          }
-
-          .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-          }
-
-          .input-icon {
-            position: absolute;
-            left: 1rem;
-            color: var(--text-secondary);
-            width: 20px;
-            height: 20px;
-            pointer-events: none;
-          }
-
-          .input-field {
-            width: 100%;
-            padding: 0.875rem 1rem 0.875rem 3rem;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            outline: none;
-          }
-
-          .input-field:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-          }
-
-          .submit-button {
-            width: 100%;
-            padding: 0.875rem;
-            background-color: var(--primary-color);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            margin-top: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
-          }
-
-          .submit-button:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-          }
-
-          .submit-button:active:not(:disabled) {
-            transform: scale(0.98);
-          }
-
-          .submit-button.loading {
-            opacity: 0.8;
-            cursor: not-allowed;
-          }
-
-          .error-box {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 8px;
-            padding: 0.875rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--danger-color);
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-          }
-
-          .spinner {
-            animation: spin 1s linear infinite;
-          }
-
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-
-          .visual-content {
-            max-width: 400px;
-            padding: 2rem;
-            z-index: 10;
-          }
-
-          .visual-content h1 {
-            font-size: 2.5rem;
-            line-height: 1.2;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-          }
-
-          .visual-content p {
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-          }
-        `}
-      </style>
+      <style>{`
+        @media (max-width: 768px) {
+          .login-right { display: none !important; }
+        }
+      `}</style>
     </div>
   );
-};
+}
 
-export default Login;
+const s = {
+  page: {
+    display: 'flex',
+    minHeight: '100vh',
+    background: 'var(--bg)',
+  },
+  left: {
+    flex: '0 0 100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '32px 24px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '400px',
+  },
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '32px',
+  },
+  logoIcon: {
+    width: '38px', height: '38px',
+    background: 'var(--primary)',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontWeight: 700,
+    fontSize: '1.1rem',
+    color: 'var(--text)',
+    letterSpacing: '-0.3px',
+  },
+  heading: {
+    fontSize: '1.6rem',
+    fontWeight: 800,
+    color: 'var(--text)',
+    letterSpacing: '-0.5px',
+    marginBottom: '6px',
+  },
+  sub: {
+    fontSize: '0.9rem',
+    color: 'var(--text-sub)',
+    marginBottom: '24px',
+  },
+  form: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  field: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-sub)' },
+  inputWrap: { position: 'relative', display: 'flex', alignItems: 'center' },
+  inputIcon: {
+    position: 'absolute', left: '12px',
+    color: 'var(--text-muted)', pointerEvents: 'none',
+  },
+  input: {
+    width: '100%',
+    padding: '10px 12px 10px 38px',
+    background: 'var(--surface)',
+    border: '1.5px solid var(--border-dark)',
+    borderRadius: 'var(--radius)',
+    color: 'var(--text)',
+    fontSize: '0.9rem',
+    outline: 'none',
+    transition: 'var(--transition)',
+  },
+  eyeBtn: {
+    position: 'absolute', right: '12px',
+    color: 'var(--text-muted)',
+    display: 'flex', alignItems: 'center',
+    padding: '2px',
+  },
+
+  /* Right panel */
+  right: {
+    display: 'none',
+    flex: 1,
+    background: 'linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px',
+  },
+  rightContent: { maxWidth: '380px', color: '#fff' },
+  rightIcon: { marginBottom: '24px' },
+  rightH2: { fontSize: '2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '16px' },
+  rightP: { fontSize: '1rem', opacity: 0.85, lineHeight: 1.7, marginBottom: '28px' },
+  features: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  feature: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', opacity: 0.9 },
+  featureDot: { width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', flexShrink: 0 },
+};

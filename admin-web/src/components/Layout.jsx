@@ -1,325 +1,361 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { 
-  Menu, X, LayoutDashboard, Store, 
-  Settings, LogOut, QrCode, User
+import {
+  Menu, X, LayoutDashboard, Store,
+  Settings, LogOut, QrCode, User, ChevronRight
 } from 'lucide-react';
 
-const Layout = ({ children }) => {
+const navLinks = [
+  { name: 'Dashboard',   path: '/',            icon: LayoutDashboard },
+  { name: 'Restaurants', path: '/restaurants', icon: Store           },
+  { name: 'Settings',    path: '/settings',    icon: Settings        },
+];
+
+export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const navLinks = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Restaurants', path: '/restaurants', icon: Store },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
+  const handleLogout = () => { logout(); navigate('/login'); };
+  const currentPage = navLinks.find(l => l.path === location.pathname)?.name || 'Admin';
 
   return (
-    <div className="layout-container">
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="sidebar-overlay" 
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+    <>
+      <div style={s.root}>
+        {/* ── Overlay (mobile) ── */}
+        {open && (
+          <div style={s.overlay} onClick={() => setOpen(false)} />
+        )}
 
-      {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="brand">
-            <QrCode size={28} color="var(--primary-color)" />
-            <span className="brand-text">PetPooja-QR</span>
-          </div>
-          <button 
-            className="mobile-close-btn"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <X size={24} />
-          </button>
-        </div>
+        {/* ── Sidebar ── */}
+        <aside style={{ ...s.sidebar, ...(open ? s.sidebarOpen : {}) }}>
 
-        <nav className="sidebar-nav">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = location.pathname === link.path;
-            return (
-              <Link 
-                key={link.path} 
-                to={link.path} 
-                className={`nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                <Icon size={20} />
-                <span>{link.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-button" onClick={handleLogout}>
-            <LogOut size={20} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="main-wrapper">
-        {/* Header */}
-        <header className="header">
-          <div className="header-left">
-            <button 
-              className="menu-toggle"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <Menu size={24} />
+          {/* Brand */}
+          <div style={s.sidebarTop}>
+            <div style={s.brand}>
+              <div style={s.brandIcon}><QrCode size={18} color="#fff" /></div>
+              <span style={s.brandText}>PetPooja QR</span>
+            </div>
+            <button style={s.closeBtn} onClick={() => setOpen(false)}>
+              <X size={20} />
             </button>
-            <h2 className="page-title">
-              {navLinks.find(l => l.path === location.pathname)?.name || 'Admin Panel'}
-            </h2>
           </div>
-          
-          <div className="header-right">
-            <div className="user-profile">
-              <div className="avatar">
-                <User size={18} />
-              </div>
-              <div className="user-info">
-                <span className="user-name">{user?.name || 'Admin User'}</span>
-                <span className="user-role">{user?.role || 'SUPER_ADMIN'}</span>
+
+          {/* Nav */}
+          <nav style={s.nav}>
+            <p style={s.navLabel}>MAIN MENU</p>
+            {navLinks.map(link => {
+              const Icon = link.icon;
+              const active = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  style={{ ...s.navLink, ...(active ? s.navLinkActive : {}) }}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon size={18} />
+                  <span style={{ flex: 1 }}>{link.name}</span>
+                  {active && <ChevronRight size={14} />}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Footer */}
+          <div style={s.sidebarFooter}>
+            <div style={s.userChip}>
+              <div style={s.avatar}><User size={14} color="#fff" /></div>
+              <div style={{ minWidth: 0 }}>
+                <div style={s.userName}>{user?.name || 'Admin'}</div>
+                <div style={s.userRole}>{user?.role || 'SUPER_ADMIN'}</div>
               </div>
             </div>
+            <button style={s.logoutBtn} onClick={handleLogout}>
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
           </div>
-        </header>
+        </aside>
 
-        {/* Page Content */}
-        <main className="main-content">
-          {children}
-        </main>
+        {/* ── Main ── */}
+        <div style={s.main}>
+          {/* Header */}
+          <header style={s.header}>
+            <div style={s.headerLeft}>
+              <button style={s.hamburger} onClick={() => setOpen(true)}>
+                <Menu size={22} />
+              </button>
+              <h1 style={s.pageTitle}>{currentPage}</h1>
+            </div>
+            <div style={s.headerRight}>
+              <div style={s.headerAvatar}><User size={15} color="#fff" /></div>
+              <div style={s.headerUserInfo}>
+                <span style={s.headerUserName}>{user?.name || 'Admin'}</span>
+                <span style={s.headerUserRole}>{user?.role}</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Content */}
+          <main style={s.content}>
+            {children}
+          </main>
+        </div>
       </div>
 
-      <style>
-        {`
-          .layout-container {
-            display: flex;
-            min-height: 100vh;
-            background-color: var(--bg-color);
-          }
-
-          /* Sidebar Setup */
-          .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--surface-color);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 50;
-            transition: transform 0.3s ease;
-          }
-
-          .sidebar-header {
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-          }
-
-          .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-          }
-
-          .brand-text {
-            font-weight: 700;
-            font-size: 1.125rem;
-            color: var(--text-primary);
-          }
-
-          .mobile-close-btn {
-            display: none;
-            color: var(--text-secondary);
-          }
-
-          .sidebar-nav {
-            flex: 1;
-            padding: 1.5rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-
-          .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            font-weight: 500;
-            transition: all 0.2s ease;
-          }
-
-          .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-          }
-
-          .nav-link.active {
-            background-color: rgba(59, 130, 246, 0.1);
-            color: var(--primary-color);
-          }
-
-          .sidebar-footer {
-            padding: 1.5rem 1rem;
-            border-top: 1px solid var(--border-color);
-          }
-
-          .logout-button {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            color: var(--danger-color);
-            font-weight: 500;
-            transition: all 0.2s ease;
-          }
-
-          .logout-button:hover {
-            background-color: rgba(239, 68, 68, 0.1);
-          }
-
-          /* Main Wrapper */
-          .main-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            /* Default desktop left margin */
-            margin-left: var(--sidebar-width);
-          }
-
-          .header {
-            height: var(--header-height);
-            background-color: var(--surface-color);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            position: sticky;
-            top: 0;
-            z-index: 40;
-          }
-
-          .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-          }
-
-          .menu-toggle {
-            display: none;
-            color: var(--text-primary);
-          }
-
-          .page-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-          }
-
-          .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-          }
-
-          .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-          }
-
-          .user-info {
-            display: flex;
-            flex-direction: column;
-          }
-
-          .user-name {
-            font-size: 0.875rem;
-            font-weight: 600;
-          }
-
-          .user-role {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-          }
-
-          .main-content {
-            flex: 1;
-            padding: 2rem;
-            overflow-y: auto;
-          }
-
-          /* Mobile Styles */
-          @media (max-width: 768px) {
-            .sidebar {
-              transform: translateX(-100%);
-            }
-            .sidebar.open {
-              transform: translateX(0);
-            }
-            .mobile-close-btn {
-              display: block;
-            }
-            .main-wrapper {
-              margin-left: 0;
-            }
-            .menu-toggle {
-              display: block;
-            }
-            .sidebar-overlay {
-              position: fixed;
-              inset: 0;
-              background-color: rgba(0,0,0,0.5);
-              z-index: 45;
-              backdrop-filter: blur(2px);
-            }
-            .user-info {
-              display: none;
-            }
-            .main-content {
-              padding: 1rem;
-            }
-          }
-        `}
-      </style>
-    </div>
+      <style>{`
+        @media (min-width: 769px) {
+          .sidebar-el  { transform: translateX(0) !important; position: sticky !important; }
+          .hamburger-el { display: none !important; }
+          .header-user  { display: flex !important; }
+          .close-btn-el { display: none !important; }
+        }
+        @media (max-width: 768px) {
+          .header-user { display: none !important; }
+        }
+      `}</style>
+    </>
   );
+}
+
+/* ── Inline styles (avoids CSS file conflicts during redesign) ── */
+const s = {
+  root: {
+    display: 'flex',
+    minHeight: '100vh',
+    background: 'var(--bg)',
+    position: 'relative',
+  },
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(15,23,42,0.4)',
+    zIndex: 99,
+    backdropFilter: 'blur(2px)',
+  },
+
+  /* Sidebar */
+  sidebar: {
+    width: '240px',
+    minHeight: '100vh',
+    background: 'var(--surface)',
+    borderRight: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    zIndex: 100,
+    transform: 'translateX(-100%)',
+    transition: 'transform 0.25s ease',
+    boxShadow: '2px 0 12px rgba(0,0,0,0.06)',
+  },
+  sidebarOpen: {
+    transform: 'translateX(0)',
+  },
+  sidebarTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 16px',
+    height: '56px',
+    borderBottom: '1px solid var(--border)',
+    flexShrink: 0,
+  },
+  brand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  brandIcon: {
+    width: '32px', height: '32px',
+    background: 'var(--primary)',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  brandText: {
+    fontWeight: 700,
+    fontSize: '0.95rem',
+    color: 'var(--text)',
+    letterSpacing: '-0.3px',
+  },
+  closeBtn: {
+    color: 'var(--text-muted)',
+    padding: '4px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  nav: {
+    flex: 1,
+    padding: '16px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    overflowY: 'auto',
+  },
+  navLabel: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    letterSpacing: '0.8px',
+    color: 'var(--text-muted)',
+    padding: '4px 8px 8px',
+  },
+  navLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '9px 12px',
+    borderRadius: '8px',
+    color: 'var(--text-sub)',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    transition: 'var(--transition)',
+    textDecoration: 'none',
+  },
+  navLinkActive: {
+    background: 'var(--primary-light)',
+    color: 'var(--primary)',
+    fontWeight: 600,
+  },
+  sidebarFooter: {
+    padding: '12px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  userChip: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '8px',
+    background: 'var(--bg)',
+    borderRadius: '8px',
+  },
+  avatar: {
+    width: '30px', height: '30px',
+    background: 'var(--primary)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  userName: {
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: 'var(--text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  userRole: {
+    fontSize: '0.68rem',
+    color: 'var(--text-muted)',
+  },
+  logoutBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '9px 12px',
+    borderRadius: '8px',
+    color: 'var(--danger)',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    transition: 'var(--transition)',
+    width: '100%',
+  },
+
+  /* Header */
+  header: {
+    height: '56px',
+    background: 'var(--surface)',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 20px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    boxShadow: 'var(--shadow-xs)',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  hamburger: {
+    color: 'var(--text-sub)',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '4px',
+    borderRadius: '6px',
+  },
+  pageTitle: {
+    fontSize: '1rem',
+    fontWeight: 700,
+    color: 'var(--text)',
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  headerAvatar: {
+    width: '32px', height: '32px',
+    background: 'var(--primary)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerUserInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  headerUserName: {
+    fontSize: '0.82rem',
+    fontWeight: 600,
+    color: 'var(--text)',
+  },
+  headerUserRole: {
+    fontSize: '0.68rem',
+    color: 'var(--text-muted)',
+  },
+
+  /* Main */
+  main: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    marginLeft: 0,
+  },
+  content: {
+    flex: 1,
+    padding: '24px',
+    overflowY: 'auto',
+    maxWidth: '1200px',
+    width: '100%',
+  },
 };
 
-export default Layout;
+/* Desktop: sidebar always visible via CSS class override */
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+  @media (min-width: 769px) {
+    aside { transform: translateX(0) !important; position: sticky !important; top: 0 !important; height: 100vh !important; min-width: 240px !important; }
+    .main-wrap { margin-left: 0 !important; }
+  }
+`;
+document.head.appendChild(styleEl);

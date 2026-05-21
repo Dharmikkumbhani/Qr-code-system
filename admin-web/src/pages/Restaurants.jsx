@@ -1,219 +1,252 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Store, Loader2, X, AlertCircle, CheckCircle2, QrCode, ChevronLeft, ChevronRight, Share2, Download, Copy, Check } from 'lucide-react';
+import {
+  Plus, Store, Loader2, X, AlertCircle, CheckCircle2,
+  QrCode, ChevronLeft, ChevronRight, Share2, Download,
+  Copy, Check, ExternalLink, TableProperties
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const Restaurants = () => {
+export default function Restaurants() {
   const [restaurants, setRestaurants] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  // Add Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState('');
+
+  /* Add modal */
+  const [addOpen, setAddOpen]         = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
+  const [formError, setFormError]     = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
-  const [formData, setFormData] = useState({
+  const [form, setForm]               = useState({
     name: '', slug: '', phone: '', address: '',
     ownerName: '', ownerEmail: '', ownerPassword: ''
   });
 
-  // QR Generation Modal State
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [selectedRest, setSelectedRest] = useState(null);
-  const [tables, setTables] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [tableCountInput, setTableCountInput] = useState('10');
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [copiedTableId, setCopiedTableId] = useState(null);
+  /* QR modal */
+  const [qrOpen, setQrOpen]           = useState(false);
+  const [selRest, setSelRest]         = useState(null);
+  const [tables, setTables]           = useState([]);
+  const [generating, setGenerating]   = useState(false);
+  const [tableCount, setTableCount]   = useState('10');
+  const [slide, setSlide]             = useState(0);
+  const [copied, setCopied]           = useState(null);
 
-  const fetchRestaurants = async () => {
+  /* Add Tables modal */
+  const [addTablesOpen, setAddTablesOpen]   = useState(false);
+  const [addTablesRest, setAddTablesRest]   = useState(null);
+  const [addTablesCount, setAddTablesCount] = useState('5');
+  const [addTablesLoading, setAddTablesLoading] = useState(false);
+  const [addTablesSuccess, setAddTablesSuccess] = useState('');
+
+  /* ── Data fetching ── */
+  const fetchAll = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const res = await api.get('/restaurants');
       setRestaurants(res.data.data || []);
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch restaurants.');
-    } finally {
-      setIsLoading(false);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { fetchAll(); }, []);
+
+  /* ── Form handlers ── */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+    if (name === 'name') {
+      setForm(f => ({ ...f, name: value, slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-') }));
     }
   };
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (e.target.name === 'name' && !formData.slug) {
-      setFormData(prev => ({
-        ...prev,
-        slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      }));
-    }
-  };
-
-  const handleAddSubmit = async (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    setFormError(''); setFormSuccess(false); setIsSubmitting(true);
+    setFormError(''); setFormSuccess(false); setSubmitting(true);
     try {
-      await api.post('/restaurants', formData);
+      await api.post('/restaurants', form);
       setFormSuccess(true);
       setTimeout(() => {
-        setIsModalOpen(false);
-        setFormData({ name: '', slug: '', phone: '', address: '', ownerName: '', ownerEmail: '', ownerPassword: '' });
+        setAddOpen(false);
+        setForm({ name:'', slug:'', phone:'', address:'', ownerName:'', ownerEmail:'', ownerPassword:'' });
         setFormSuccess(false);
-        fetchRestaurants();
-      }, 1500);
+        fetchAll();
+      }, 1400);
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to create restaurant');
-    } finally {
-      setIsSubmitting(false);
-    }
+      setFormError(err.response?.data?.message || 'Failed to create restaurant.');
+    } finally { setSubmitting(false); }
   };
 
-  const openQrModal = async (restaurant) => {
-    setSelectedRest(restaurant);
-    setQrModalOpen(true);
-    setActiveSlide(0);
-    setTables([]); // Reset
-    
-    // Fetch existing tables
+  /* ── QR handlers ── */
+  const openQr = async (rest) => {
+    setSelRest(rest); setQrOpen(true); setSlide(0); setTables([]);
     try {
-      const res = await api.get(`/restaurants/${restaurant.id}/tables`);
-      if (res.data.data) {
-        setTables(res.data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching tables', err);
-    }
+      const res = await api.get(`/restaurants/${rest.id}/tables`);
+      setTables(res.data.data || []);
+    } catch { /* ignore */ }
   };
 
-  const handleGenerateTables = async () => {
-    if (!selectedRest) return;
-    setIsGenerating(true);
+  const generateTables = async () => {
+    setGenerating(true);
     try {
-      const res = await api.post(`/restaurants/${selectedRest.id}/tables`, { count: parseInt(tableCountInput) });
+      const res = await api.post(`/restaurants/${selRest.id}/tables`, { count: parseInt(tableCount) });
       setTables(res.data.data);
-      // Update restaurant count locally
-      setRestaurants(prev => prev.map(r => r.id === selectedRest.id ? { ...r, _count: { ...r._count, tables: res.data.data.length } } : r));
     } catch (err) {
-      console.error(err);
       alert(err.response?.data?.message || 'Error generating tables');
-    } finally {
-      setIsGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
-  const downloadQrCode = () => {
-    const svg = document.getElementById(`qr-${activeSlide}`);
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    
+  /* ── Add Tables (quick modal) ── */
+  const handleAddTables = async () => {
+    if (!addTablesRest || !addTablesCount) return;
+    setAddTablesLoading(true);
+    setAddTablesSuccess('');
+    try {
+      const res = await api.post(`/restaurants/${addTablesRest.id}/tables`, { count: parseInt(addTablesCount) });
+      const newTotal = res.data.data.length;
+      // Update table count in the list immediately
+      setRestaurants(prev =>
+        prev.map(r => r.id === addTablesRest.id
+          ? { ...r, _count: { ...r._count, tables: newTotal } }
+          : r
+        )
+      );
+      setAddTablesSuccess(`✓ ${newTotal} tables now active for ${addTablesRest.name}`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add tables');
+    } finally { setAddTablesLoading(false); }
+  };
+
+  const tableUrl = (t) => `http://localhost:5175${t.qrCodeUrl}?t=${t.id}`;
+
+  const downloadQr = () => {
+    const svg  = document.getElementById(`qr-svg-${slide}`);
+    const data = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+    const img    = new Image();
     img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      canvas.width = img.width; canvas.height = img.height;
+      ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
-      
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `${selectedRest.slug}-${tables[activeSlide].tableNumber}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
+      const a = document.createElement('a');
+      a.download = `${selRest.slug}-${tables[slide].tableNumber}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
     };
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-  };
-
-  const shareViaWhatsApp = () => {
-    const currentTable = tables[activeSlide];
-    // Uses localhost for development testing
-    const url = `http://localhost:5173${currentTable.qrCodeUrl}?t=${currentTable.id}`;
-    const text = encodeURIComponent(`Here is the QR link for ${currentTable.tableNumber} at ${selectedRest.name}:\n\n${url}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
   };
 
   const copyLink = () => {
-    const currentTable = tables[activeSlide];
-    const url = `http://localhost:5173${currentTable.qrCodeUrl}?t=${currentTable.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedTableId(currentTable.id);
-      setTimeout(() => setCopiedTableId(null), 2000);
+    const t = tables[slide];
+    navigator.clipboard.writeText(tableUrl(t)).then(() => {
+      setCopied(t.id);
+      setTimeout(() => setCopied(null), 2000);
     });
   };
 
+  const whatsapp = () => {
+    const t = tables[slide];
+    const url = encodeURIComponent(`QR link for ${t.tableNumber} at ${selRest.name}:\n${tableUrl(t)}`);
+    window.open(`https://api.whatsapp.com/send?text=${url}`, '_blank');
+  };
+
   return (
-    <div className="restaurants-page">
-      <div className="page-header">
+    <div>
+      {/* ── Page Header ── */}
+      <div style={s.pageHead}>
         <div>
-          <h1 className="page-title">Restaurants Management</h1>
-          <p className="page-subtitle">View and onboard new restaurants.</p>
+          <h2 style={s.pageTitle}>Restaurants</h2>
+          <p style={s.pageSub}>Manage all onboarded restaurants and their QR codes.</p>
         </div>
-        <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          <span>Add Restaurant</span>
+        <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+          <Plus size={16} /> Add Restaurant
         </button>
       </div>
 
-      <div className="content-card">
-        {isLoading ? (
-          <div className="loading-state">
-            <Loader2 size={32} className="spin text-primary" />
-            <p>Loading restaurants...</p>
+      {/* ── Card ── */}
+      <div style={s.card}>
+        {loading ? (
+          <div className="state-box">
+            <Loader2 size={30} className="spin" style={{ color: 'var(--primary)' }} />
+            <p>Loading restaurants…</p>
           </div>
         ) : error ? (
-          <div className="error-state">
-            <AlertCircle size={32} />
-            <p>{error}</p>
+          <div className="state-box">
+            <AlertCircle size={30} style={{ color: 'var(--danger)' }} />
+            <p style={{ color: 'var(--danger)' }}>{error}</p>
           </div>
         ) : restaurants.length === 0 ? (
-          <div className="empty-state">
-            <Store size={48} className="text-secondary" />
-            <h3>No Restaurants Yet</h3>
-            <p>Get started by adding your first restaurant to the platform.</p>
+          <div className="state-box">
+            <Store size={36} style={{ color: 'var(--text-muted)' }} />
+            <h3>No restaurants yet</h3>
+            <p>Click "Add Restaurant" to onboard your first restaurant.</p>
+            <button className="btn btn-primary" style={{ marginTop: '8px' }} onClick={() => setAddOpen(true)}>
+              <Plus size={15} /> Add Restaurant
+            </button>
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="data-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={s.table}>
               <thead>
                 <tr>
-                  <th>Restaurant</th>
-                  <th>Slug URL</th>
-                  <th>Owner</th>
-                  <th>Tables</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  {['Restaurant', 'URL Slug', 'Owner', 'Tables', 'Status', 'Actions'].map(h => (
+                    <th key={h} style={s.th}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {restaurants.map((rest) => (
-                  <tr key={rest.id}>
-                    <td>
-                      <div className="rest-name">{rest.name}</div>
-                      <div className="rest-phone">{rest.phone}</div>
+                {restaurants.map(r => (
+                  <tr key={r.id} style={s.tr}>
+                    <td style={s.td}>
+                      <div style={s.restName}>{r.name}</div>
+                      {r.phone && <div style={s.restPhone}>{r.phone}</div>}
                     </td>
-                    <td className="monospace">/{rest.slug}</td>
-                    <td>
-                      <div>{rest.owner?.name}</div>
-                      <div className="text-sm text-secondary">{rest.owner?.email}</div>
+                    <td style={s.td}>
+                      <code style={s.code}>/{r.slug}</code>
                     </td>
-                    <td>{rest._count?.tables || 0}</td>
-                    <td>
-                      <span className={`badge ${rest.subscriptionStatus === 'ACTIVE' ? 'badge-success' : 'badge-danger'}`}>
-                        {rest.subscriptionStatus}
+                    <td style={s.td}>
+                      <div style={{ fontWeight: 500 }}>{r.owner?.name || '—'}</div>
+                      <div style={s.restPhone}>{r.owner?.email}</div>
+                    </td>
+                    <td style={s.td}>
+                      <span className="badge badge-primary">{r._count?.tables || 0}</span>
+                    </td>
+                    <td style={s.td}>
+                      <span className={`badge ${r.subscriptionStatus === 'ACTIVE' ? 'badge-success' : 'badge-danger'}`}>
+                        {r.subscriptionStatus}
                       </span>
                     </td>
-                    <td style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="action-btn" onClick={() => openQrModal(rest)}>
-                        <QrCode size={18} /> QR
-                      </button>
-                      <button className="action-btn" onClick={() => window.location.href=`/restaurants/${rest.id}/menu`}>
-                        <Store size={18} /> Menu
-                      </button>
+                    <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                          onClick={() => openQr(r)}
+                        >
+                          <QrCode size={14} /> QR Codes
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setAddTablesRest(r);
+                            setAddTablesCount('5');
+                            setAddTablesSuccess('');
+                            setAddTablesOpen(true);
+                          }}
+                          title="Add more tables"
+                        >
+                          <TableProperties size={14} /> + Tables
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                          onClick={() => window.location.href = `/restaurants/${r.id}/menu`}
+                        >
+                          <ExternalLink size={14} /> Menu
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -223,57 +256,133 @@ const Restaurants = () => {
         )}
       </div>
 
-      {/* Add Restaurant Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>Add New Restaurant</h2>
-              <button className="close-btn" onClick={() => !isSubmitting && setIsModalOpen(false)}><X size={20} /></button>
+      {/* ── Add Tables Modal ── */}
+      {addTablesOpen && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setAddTablesOpen(false)}>
+          <div className="modal-box" style={{ maxWidth: '380px' }}>
+            <div className="modal-head">
+              <div>
+                <h2>Add Tables</h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {addTablesRest?.name}
+                </p>
+              </div>
+              <button className="btn-icon" onClick={() => setAddTablesOpen(false)}><X size={18} /></button>
             </div>
-            <form onSubmit={handleAddSubmit} className="modal-body">
-              {formError && <div className="alert alert-error"><AlertCircle size={16} /> {formError}</div>}
-              {formSuccess && <div className="alert alert-success"><CheckCircle2 size={16} /> Created successfully!</div>}
-              <div className="form-grid">
-                <div className="form-section">
-                  <h3>Restaurant Details</h3>
-                  <div className="input-group">
-                    <label>Restaurant Name *</label>
-                    <input name="name" value={formData.name} onChange={handleInputChange} required />
-                  </div>
-                  <div className="input-group">
-                    <label>Slug (URL) *</label>
-                    <input name="slug" value={formData.slug} onChange={handleInputChange} required />
-                  </div>
-                  <div className="input-group">
-                    <label>Phone Number</label>
-                    <input name="phone" value={formData.phone} onChange={handleInputChange} />
-                  </div>
-                  <div className="input-group">
-                    <label>Address</label>
-                    <textarea name="address" value={formData.address} onChange={handleInputChange} rows={2}></textarea>
-                  </div>
+
+            <div className="modal-body">
+              {addTablesSuccess ? (
+                <div className="alert alert-success" style={{ marginBottom: 0 }}>
+                  <CheckCircle2 size={16} />
+                  {addTablesSuccess}
                 </div>
-                <div className="form-section">
-                  <h3>Owner Credentials</h3>
-                  <div className="input-group">
-                    <label>Owner Name</label>
-                    <input name="ownerName" value={formData.ownerName} onChange={handleInputChange} />
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-sub)', marginBottom: '16px', lineHeight: 1.5 }}>
+                    Currently <strong>{addTablesRest?._count?.tables || 0} tables</strong>.
+                    How many total tables should this restaurant have?
+                  </p>
+                  <div style={{ display: 'flex', align: 'center', gap: '10px' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      max="200"
+                      className="form-input"
+                      value={addTablesCount}
+                      onChange={e => setAddTablesCount(e.target.value)}
+                      style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}
+                      autoFocus
+                    />
+                    <span style={{ alignSelf: 'center', fontSize: '0.82rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      tables total
+                    </span>
                   </div>
-                  <div className="input-group">
-                    <label>Owner Email *</label>
-                    <input type="email" name="ownerEmail" value={formData.ownerEmail} onChange={handleInputChange} required />
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                    This will replace all existing tables with the new count.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="modal-foot">
+              {addTablesSuccess ? (
+                <button className="btn btn-primary" onClick={() => setAddTablesOpen(false)}>Done</button>
+              ) : (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setAddTablesOpen(false)}>Cancel</button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleAddTables}
+                    disabled={addTablesLoading || !addTablesCount}
+                  >
+                    {addTablesLoading
+                      ? <><Loader2 size={14} className="spin" /> Generating…</>
+                      : <><TableProperties size={14} /> Generate Tables</>
+                    }
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Restaurant Modal ── */}
+      {addOpen && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !submitting && setAddOpen(false)}>
+          <div className="modal-box" style={{ maxWidth: '680px' }}>
+            <div className="modal-head">
+              <h2>Add New Restaurant</h2>
+              <button className="btn-icon" onClick={() => !submitting && setAddOpen(false)}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleAdd}>
+              <div className="modal-body">
+                {formError   && <div className="alert alert-error"><AlertCircle size={15}/>{formError}</div>}
+                {formSuccess  && <div className="alert alert-success"><CheckCircle2 size={15}/>Restaurant created successfully!</div>}
+
+                <div style={s.formGrid}>
+                  {/* Restaurant info */}
+                  <div>
+                    <p style={s.sectionLabel}>Restaurant Details</p>
+                    <div style={s.fieldGroup}>
+                      <Field label="Restaurant Name *">
+                        <input name="name" className="form-input" value={form.name} onChange={handleChange} required />
+                      </Field>
+                      <Field label="URL Slug *" hint="Auto-generated from name">
+                        <input name="slug" className="form-input" value={form.slug} onChange={handleChange} required />
+                      </Field>
+                      <Field label="Phone Number">
+                        <input name="phone" className="form-input" value={form.phone} onChange={handleChange} />
+                      </Field>
+                      <Field label="Address">
+                        <textarea name="address" className="form-input" rows={2} value={form.address} onChange={handleChange} style={{ resize: 'vertical' }} />
+                      </Field>
+                    </div>
                   </div>
-                  <div className="input-group">
-                    <label>Owner Password *</label>
-                    <input type="password" name="ownerPassword" value={formData.ownerPassword} onChange={handleInputChange} required />
+
+                  {/* Owner */}
+                  <div>
+                    <p style={s.sectionLabel}>Owner Account</p>
+                    <div style={s.fieldGroup}>
+                      <Field label="Owner Name">
+                        <input name="ownerName" className="form-input" value={form.ownerName} onChange={handleChange} />
+                      </Field>
+                      <Field label="Owner Email *">
+                        <input type="email" name="ownerEmail" className="form-input" value={form.ownerEmail} onChange={handleChange} required />
+                      </Field>
+                      <Field label="Password *">
+                        <input type="password" name="ownerPassword" className="form-input" value={form.ownerPassword} onChange={handleChange} required />
+                      </Field>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 size={16} className="spin" /> : 'Create'}
+
+              <div className="modal-foot">
+                <button type="button" className="btn btn-secondary" onClick={() => setAddOpen(false)} disabled={submitting}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? <><Loader2 size={14} className="spin" /> Creating…</> : 'Create Restaurant'}
                 </button>
               </div>
             </form>
@@ -281,206 +390,144 @@ const Restaurants = () => {
         </div>
       )}
 
-      {/* QR Codes Modal */}
-      {qrModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content qr-modal">
-            <div className="modal-header">
-              <h2>QR Codes: {selectedRest?.name}</h2>
-              <button className="close-btn" onClick={() => setQrModalOpen(false)}><X size={20} /></button>
+      {/* ── QR Codes Modal ── */}
+      {qrOpen && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setQrOpen(false)}>
+          <div className="modal-box" style={{ maxWidth: '480px' }}>
+            <div className="modal-head">
+              <div>
+                <h2>QR Codes</h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>{selRest?.name}</p>
+              </div>
+              <button className="btn-icon" onClick={() => setQrOpen(false)}><X size={18} /></button>
             </div>
-            
-            <div className="modal-body qr-body">
+
+            <div className="modal-body" style={{ minHeight: '380px' }}>
               {tables.length === 0 ? (
-                <div className="generate-state">
-                  <QrCode size={48} className="text-secondary mb-1" />
-                  <h3>No tables generated yet</h3>
-                  <p className="text-secondary mb-2">How many tables does this restaurant have?</p>
-                  <div className="generate-actions">
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="100" 
-                      value={tableCountInput} 
-                      onChange={e => setTableCountInput(e.target.value)}
-                      className="count-input"
+                <div className="state-box" style={{ padding: '16px' }}>
+                  <QrCode size={40} style={{ color: 'var(--text-muted)' }} />
+                  <h3>No tables yet</h3>
+                  <p>How many tables does this restaurant have?</p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
+                    <input
+                      type="number" min="1" max="100"
+                      value={tableCount}
+                      onChange={e => setTableCount(e.target.value)}
+                      className="form-input"
+                      style={{ width: '80px', textAlign: 'center' }}
                     />
-                    <button className="btn-primary" onClick={handleGenerateTables} disabled={isGenerating}>
-                      {isGenerating ? <Loader2 size={16} className="spin" /> : 'Generate Now'}
+                    <button className="btn btn-primary" onClick={generateTables} disabled={generating}>
+                      {generating ? <><Loader2 size={14} className="spin" /> Generating…</> : 'Generate'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="carousel-container">
-                  <div className="carousel-nav">
-                    <button 
-                      className="nav-btn" 
-                      onClick={() => setActiveSlide(prev => prev > 0 ? prev - 1 : prev)}
-                      disabled={activeSlide === 0}
-                    >
-                      <ChevronLeft size={24} />
+                <div>
+                  {/* Carousel */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btn-icon" onClick={() => setSlide(p => Math.max(0, p-1))} disabled={slide === 0} style={{ flexShrink: 0 }}>
+                      <ChevronLeft size={20} />
                     </button>
-                  </div>
-                  
-                  <div className="qr-slide">
-                    <div className="qr-card">
-                      <h3 className="table-title">{tables[activeSlide].tableNumber}</h3>
-                      <div className="qr-wrapper">
-                        <QRCodeSVG 
-                          id={`qr-${activeSlide}`}
-                          value={`http://localhost:5173${tables[activeSlide].qrCodeUrl}?t=${tables[activeSlide].id}`} 
-                          size={200}
-                          level="H"
-                          includeMargin={true}
-                        />
-                      </div>
-                      <p className="qr-hint">Scan to order at this table</p>
-                    </div>
 
-                    <div className="link-display">
-                      <p className="link-label">or use this link:</p>
-                      <div className="link-container">
-                        <input 
-                          type="text" 
-                          readOnly 
-                          value={`http://localhost:5173${tables[activeSlide].qrCodeUrl}?t=${tables[activeSlide].id}`}
-                          className="link-input"
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                      {/* QR Card */}
+                      <div style={s.qrCard}>
+                        <p style={s.tableNum}>{tables[slide].tableNumber}</p>
+                        <QRCodeSVG
+                          id={`qr-svg-${slide}`}
+                          value={tableUrl(tables[slide])}
+                          size={180}
+                          level="H"
+                          includeMargin
                         />
-                        <button className="copy-btn" onClick={copyLink} title="Copy link">
-                          {copiedTableId === tables[activeSlide].id ? (
-                            <><Check size={16} /> Copied</>
-                          ) : (
-                            <><Copy size={16} /> Copy</>
-                          )}
+                        <p style={s.qrHint}>Scan to order</p>
+                      </div>
+
+                      {/* Link */}
+                      <div style={{ width: '100%' }}>
+                        <p style={s.linkLabel}>Table link</p>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input readOnly value={tableUrl(tables[slide])} className="form-input" style={{ fontSize: '0.75rem', fontFamily: 'monospace' }} />
+                          <button className="btn btn-secondary" style={{ padding: '8px 10px', flexShrink: 0 }} onClick={copyLink}>
+                            {copied === tables[slide].id ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={whatsapp}>
+                          <Share2 size={14} /> WhatsApp
+                        </button>
+                        <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={downloadQr}>
+                          <Download size={14} /> Download
                         </button>
                       </div>
                     </div>
 
-                    <div className="qr-actions">
-                      <button className="action-button whatsapp" onClick={shareViaWhatsApp}>
-                        <Share2 size={18} /> Share via WhatsApp
-                      </button>
-                      <button className="action-button download" onClick={downloadQrCode}>
-                        <Download size={18} /> Download Image
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="carousel-nav">
-                    <button 
-                      className="nav-btn" 
-                      onClick={() => setActiveSlide(prev => prev < tables.length - 1 ? prev + 1 : prev)}
-                      disabled={activeSlide === tables.length - 1}
-                    >
-                      <ChevronRight size={24} />
+                    <button className="btn-icon" onClick={() => setSlide(p => Math.min(tables.length-1, p+1))} disabled={slide === tables.length-1} style={{ flexShrink: 0 }}>
+                      <ChevronRight size={20} />
                     </button>
                   </div>
-                  
-                  <div className="slide-counter">
-                    {activeSlide + 1} / {tables.length}
-                  </div>
+
+                  {/* Counter */}
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '12px' }}>
+                    {slide + 1} of {tables.length} tables
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Styles */}
-      <style>
-        {`
-          .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;}
-          .page-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
-          .page-subtitle { font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem; }
-          .primary-btn, .btn-primary { display: flex; align-items: center; gap: 0.5rem; background: var(--primary-color); color: #fff; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 500; border: none; cursor: pointer; transition: background 0.2s; }
-          .primary-btn:hover, .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
-          .btn-secondary { padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 500; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); cursor: pointer; }
-          
-          .content-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
-          .loading-state, .error-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; color: var(--text-secondary); }
-          .error-state { color: var(--danger-color); }
-          .empty-state h3 { color: var(--text-primary); margin: 1rem 0 0.5rem; }
-          .spin { animation: spin 1s linear infinite; }
-          
-          .table-responsive { overflow-x: auto; }
-          .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-          .data-table th { padding: 1rem 1.5rem; font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.1); }
-          .data-table td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.875rem; vertical-align: middle; }
-          .data-table tr:hover { background: rgba(255,255,255,0.02); }
-          .rest-name { font-weight: 600; color: var(--text-primary); }
-          .monospace { font-family: monospace; color: var(--primary-color); }
-          .text-sm { font-size: 0.75rem; }
-          .text-secondary { color: var(--text-secondary); }
-          .text-primary { color: var(--primary-color); }
-          .mb-1 { margin-bottom: 0.5rem; }
-          .mb-2 { margin-bottom: 1rem; }
-          
-          .badge { padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
-          .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-          .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
-          
-          .action-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; transition: all 0.2s; }
-          .action-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
-          
-          /* Modal Setup */
-          .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
-          .modal-content { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
-          .qr-modal { max-width: 500px; }
-          .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-          .modal-header h2 { font-size: 1.25rem; font-weight: 600; }
-          .close-btn { color: var(--text-secondary); cursor: pointer; transition: color 0.2s; }
-          .close-btn:hover { color: var(--text-primary); }
-          .modal-body { padding: 1.5rem; overflow-y: auto; }
-          .qr-body { min-height: 400px; display: flex; flex-direction: column; justify-content: center; }
-          
-          .generate-state { text-align: center; display: flex; flex-direction: column; align-items: center; }
-          .generate-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
-          .count-input { width: 80px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: white; text-align: center; }
-          
-          .carousel-container { position: relative; display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; }
-          .carousel-nav { flex: 0 0 40px; display: flex; justify-content: center; }
-          .nav-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-          .nav-btn:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
-          .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-          
-          .qr-slide { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0 1rem; }
-          .qr-card { background: white; padding: 2rem; border-radius: 12px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 280px; }
-          .table-title { color: #1e293b; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
-          .qr-wrapper { display: flex; justify-content: center; margin-bottom: 1.5rem; }
-          .qr-hint { color: #64748b; font-size: 0.875rem; }
-          
-          .link-display { width: 100%; max-width: 280px; margin: 1.5rem auto 0; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
-          .link-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; font-weight: 600; }
-          .link-container { display: flex; gap: 0.5rem; align-items: center; }
-          .link-input { flex: 1; padding: 0.5rem 0.75rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.75rem; color: #1e293b; font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
-          .copy-btn { padding: 0.5rem 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 0.25rem; transition: background 0.2s; white-space: nowrap; }
-          .copy-btn:hover { background: var(--primary-hover); }
-          
-          .qr-actions { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 280px; margin-top: 2rem; }
-          .action-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 0.875rem; transition: transform 0.1s; }
-          .action-button:active { transform: scale(0.98); }
-          .whatsapp { background-color: #25D366; color: white; }
-          .whatsapp:hover { background-color: #128C7E; }
-          .download { background-color: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); }
-          .download:hover { border-color: var(--text-primary); }
-          
-          .slide-counter { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; }
-          
-          .form-grid { display: grid; gap: 2rem; grid-template-columns: 1fr; }
-          @media (min-width: 640px) { .form-grid { grid-template-columns: 1fr 1fr; } }
-          .form-section h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
-          .input-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
-          .input-group label { font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); }
-          .input-group input, .input-group textarea { padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary); outline: none; }
-          .input-group input:focus, .input-group textarea:focus { border-color: var(--primary-color); }
-          .modal-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; background: rgba(0,0,0,0.1); }
-          .alert { padding: 0.75rem; border-radius: 6px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; margin-bottom: 1.5rem; }
-          .alert-error { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.2); }
-          .alert-success { background: rgba(16, 185, 129, 0.1); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.2); }
-        `}
-      </style>
     </div>
   );
-};
+}
 
-export default Restaurants;
+/* ── Small helper ── */
+function Field({ label, hint, children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-sub)' }}>
+        {label} {hint && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— {hint}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const s = {
+  pageHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
+  pageTitle: { fontSize: '1.2rem', fontWeight: 700, color: 'var(--text)' },
+  pageSub: { fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' },
+
+  card: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' },
+
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' },
+  th: {
+    padding: '11px 16px',
+    textAlign: 'left',
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    color: 'var(--text-muted)',
+    background: 'var(--bg)',
+    borderBottom: '1px solid var(--border)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+    whiteSpace: 'nowrap',
+  },
+  td: { padding: '13px 16px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' },
+  tr: { transition: 'background 0.15s' },
+  restName: { fontWeight: 600, color: 'var(--text)' },
+  restPhone: { fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '1px' },
+  code: { fontSize: '0.78rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' },
+
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' },
+  sectionLabel: { fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px' },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: '12px' },
+
+  qrCard: { background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' },
+  tableNum: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' },
+  qrHint: { fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '10px' },
+  linkLabel: { fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' },
+};
