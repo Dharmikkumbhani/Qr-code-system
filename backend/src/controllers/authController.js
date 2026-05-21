@@ -34,3 +34,22 @@ exports.login = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.updatePushToken = async (req, res, next) => {
+  try {
+    const { pushToken } = req.body;
+    const userId = req.user.id; // From protect middleware
+
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { pushToken }
+    });
+
+    return sendSuccess(res, 200, 'Push token updated successfully', { user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};

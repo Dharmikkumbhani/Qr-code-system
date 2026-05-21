@@ -14,8 +14,11 @@ exports.placeOrder = async (req, res, next) => {
       return next(new AppError('restaurantId, tableId, and at least one item are required', 400));
     }
 
-    // Validate restaurant exists
-    const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
+    // Validate restaurant exists and get owner's push token
+    const restaurant = await prisma.restaurant.findUnique({ 
+      where: { id: restaurantId },
+      include: { owner: { select: { pushToken: true } } }
+    });
     if (!restaurant) return next(new AppError('Restaurant not found', 404));
 
     // Validate table belongs to this restaurant
@@ -86,6 +89,18 @@ exports.placeOrder = async (req, res, next) => {
     // Emit socket event to the restaurant's room
     if (req.io) {
       req.io.to(`restaurant_${restaurantId}`).emit('newOrder', order);
+    }
+
+    // Send push notification to the owner if they have a push token
+    if (restaurant.owner?.pushToken) {
+      const { sendPushNotification } = require('../services/pushService');
+      const tableNumber = order.table?.tableNumber || 'a table';
+      sendPushNotification(
+        restaurant.owner.pushToken,
+        'New Order Received! 🍽️',
+        `A new order has been placed at ${tableNumber}.`,
+        { orderId: order.id }
+      );
     }
 
     return sendSuccess(res, 201, 'Order placed successfully', order);

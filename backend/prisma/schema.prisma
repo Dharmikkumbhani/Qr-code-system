@@ -39,6 +39,7 @@ model User {
   email        String       @unique @db.VarChar(255)
   passwordHash String       @map("password_hash") @db.VarChar(255)
   role         Role         @default(OWNER)
+  pushToken    String?      @map("push_token") @db.VarChar(255)
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
   restaurants  Restaurant[]

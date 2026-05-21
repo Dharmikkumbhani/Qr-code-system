@@ -5,6 +5,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSys
 import api from '../services/api';
 import { getStoredUser } from '../services/authService';
 import { initiateSocketConnection, disconnectSocket } from '../services/socket';
+import { registerForPushNotificationsAsync } from '../services/pushNotifications';
 
 // Notification bell button rendered in the header's right slot
 const NotifBell = ({ hasNew }) => (
@@ -89,6 +90,9 @@ const DashboardScreen = ({ navigation }) => {
         setRestaurantId(rId);
         fetchOrders(rId);
         
+        // Setup Push Notifications
+        registerForPushNotificationsAsync();
+
         // Setup Socket
         const socket = initiateSocketConnection(rId);
         
