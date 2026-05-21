@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Store, Loader2, X, AlertCircle, CheckCircle2, QrCode, ChevronLeft, ChevronRight, Share2, Download } from 'lucide-react';
+import { Plus, Store, Loader2, X, AlertCircle, CheckCircle2, QrCode, ChevronLeft, ChevronRight, Share2, Download, Copy, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const Restaurants = () => {
@@ -25,6 +25,7 @@ const Restaurants = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [tableCountInput, setTableCountInput] = useState('10');
   const [activeSlide, setActiveSlide] = useState(0);
+  const [copiedTableId, setCopiedTableId] = useState(null);
 
   const fetchRestaurants = async () => {
     try {
@@ -134,6 +135,15 @@ const Restaurants = () => {
     const url = `http://localhost:5173${currentTable.qrCodeUrl}?t=${currentTable.id}`;
     const text = encodeURIComponent(`Here is the QR link for ${currentTable.tableNumber} at ${selectedRest.name}:\n\n${url}`);
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const copyLink = () => {
+    const currentTable = tables[activeSlide];
+    const url = `http://localhost:5173${currentTable.qrCodeUrl}?t=${currentTable.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedTableId(currentTable.id);
+      setTimeout(() => setCopiedTableId(null), 2000);
+    });
   };
 
   return (
@@ -327,6 +337,25 @@ const Restaurants = () => {
                       <p className="qr-hint">Scan to order at this table</p>
                     </div>
 
+                    <div className="link-display">
+                      <p className="link-label">or use this link:</p>
+                      <div className="link-container">
+                        <input 
+                          type="text" 
+                          readOnly 
+                          value={`http://localhost:5173${tables[activeSlide].qrCodeUrl}?t=${tables[activeSlide].id}`}
+                          className="link-input"
+                        />
+                        <button className="copy-btn" onClick={copyLink} title="Copy link">
+                          {copiedTableId === tables[activeSlide].id ? (
+                            <><Check size={16} /> Copied</>
+                          ) : (
+                            <><Copy size={16} /> Copy</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="qr-actions">
                       <button className="action-button whatsapp" onClick={shareViaWhatsApp}>
                         <Share2 size={18} /> Share via WhatsApp
@@ -419,6 +448,13 @@ const Restaurants = () => {
           .table-title { color: #1e293b; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
           .qr-wrapper { display: flex; justify-content: center; margin-bottom: 1.5rem; }
           .qr-hint { color: #64748b; font-size: 0.875rem; }
+          
+          .link-display { width: 100%; max-width: 280px; margin: 1.5rem auto 0; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
+          .link-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; font-weight: 600; }
+          .link-container { display: flex; gap: 0.5rem; align-items: center; }
+          .link-input { flex: 1; padding: 0.5rem 0.75rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.75rem; color: #1e293b; font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
+          .copy-btn { padding: 0.5rem 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 0.25rem; transition: background 0.2s; white-space: nowrap; }
+          .copy-btn:hover { background: var(--primary-hover); }
           
           .qr-actions { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 280px; margin-top: 2rem; }
           .action-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 0.875rem; transition: transform 0.1s; }

@@ -2,18 +2,19 @@
   display: flex;
   align-items: center;
   gap: 0;
-  background: var(--bg);
+  background: var(--bg-white);
   border: 1.5px solid var(--accent);
-  border-radius: 50px;
+  border-radius: 6px;
   overflow: hidden;
+  min-width: 96px;
 }
 
 .qty-btn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   background: transparent;
   color: var(--accent);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -24,14 +25,22 @@
   flex-shrink: 0;
 }
 
+.qty-btn:hover {
+  background: var(--accent-light);
+}
+
 .qty-btn:active {
-  background: var(--accent-glow);
+  background: var(--accent-light);
+  transform: scale(0.9);
 }
 
 .qty-value {
-  min-width: 28px;
+  flex: 1;
   text-align: center;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--accent);
+  border-left: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  line-height: 34px;
 }

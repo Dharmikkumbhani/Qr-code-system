@@ -23,11 +23,12 @@
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  background: #111;
+  background: var(--bg-white);
   border-radius: var(--radius-modal);
   padding-bottom: max(24px, env(safe-area-inset-bottom));
   animation: sheetUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.12);
 }
 
 .modal-handle {
@@ -59,8 +60,8 @@
 }
 
 .modal-close {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
+  background: var(--bg);
+  border: 1px solid var(--border-dark);
   color: var(--text-muted);
   width: 32px;
   height: 32px;
@@ -85,7 +86,7 @@
   gap: 8px;
   margin: 16px 20px;
   padding: 12px 16px;
-  background: var(--card-bg);
+  background: var(--bg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
@@ -131,8 +132,8 @@
   display: flex;
   align-items: center;
   gap: 0;
-  background: #1E1E1E;
-  border: 1.5px solid var(--border);
+  background: var(--bg);
+  border: 1.5px solid var(--border-dark);
   border-radius: var(--radius);
   overflow: hidden;
   transition: var(--transition);
@@ -175,8 +176,8 @@
 .otp-box {
   width: 48px;
   height: 56px;
-  background: var(--card-bg);
-  border: 2px solid var(--border);
+  background: var(--bg);
+  border: 2px solid var(--border-dark);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: var(--font);

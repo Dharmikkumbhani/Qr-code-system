@@ -1,69 +1,71 @@
+/* ─── Row wrapper ────────────────────────────────────────────── */
 .menu-item {
   display: flex;
-  gap: 14px;
-  background: var(--card-bg);
-  border-radius: var(--radius);
-  padding: 14px;
-  border: 1px solid var(--border);
-  transition: var(--transition);
-  animation: fadeUp 0.3s ease forwards;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeUp 0.25s ease forwards;
 }
 
-.menu-item__img-wrap {
-  flex-shrink: 0;
-  width: 90px;
-  height: 90px;
-  border-radius: 12px;
-  overflow: hidden;
+.menu-item:last-child {
+  border-bottom: none;
 }
 
-.menu-item__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.menu-item__img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  font-weight: 700;
-  color: rgba(255,255,255,0.85);
-}
-
+/* ─── Left: info column ──────────────────────────────────────── */
 .menu-item__info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
-.menu-item__top {
+/* Veg / Non-veg icon — Indian standard square with dot */
+.menu-item__veg-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1.5px solid;
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 2px;
 }
 
-.menu-item__dot {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
+.menu-item__veg-icon--veg {
+  border-color: var(--veg);
+}
+
+.menu-item__veg-icon--nonveg {
+  border-color: var(--nonveg);
+}
+
+.menu-item__veg-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 
+.menu-item__veg-icon--veg .menu-item__veg-dot {
+  background: var(--veg);
+}
+
+.menu-item__veg-icon--nonveg .menu-item__veg-dot {
+  background: var(--nonveg);
+}
+
+/* Name */
 .menu-item__name {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
+/* Description */
 .menu-item__desc {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -74,34 +76,60 @@
   overflow: hidden;
 }
 
-.menu-item__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-}
-
+/* Price */
 .menu-item__price {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--text);
+  margin-top: 2px;
 }
 
+/* ─── Right: image + action ──────────────────────────────────── */
+.menu-item__right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Image (optional) */
+.menu-item__img-wrap {
+  width: 88px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.menu-item__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* "+ Add" button */
 .menu-item__add-btn {
-  background: transparent;
+  background: var(--bg-white);
   border: 1.5px solid var(--accent);
   color: var(--accent);
   font-family: var(--font);
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  padding: 7px 18px;
-  border-radius: 50px;
+  padding: 7px 20px;
+  border-radius: 6px;
   cursor: pointer;
   transition: var(--transition);
   letter-spacing: 0.2px;
+  min-width: 72px;
+  text-align: center;
+}
+
+.menu-item__add-btn:hover {
+  background: var(--accent-light);
 }
 
 .menu-item__add-btn:active {
-  background: var(--accent-glow);
-  transform: scale(0.96);
+  transform: scale(0.95);
+  background: var(--accent-light);
 }
