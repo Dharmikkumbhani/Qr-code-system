@@ -27,8 +27,8 @@ api.interceptors.response.use(
 );
 
 // ── Public ────────────────────────────────────────────────────
-export const getPublicMenu = (restaurantSlug) =>
-  api.get(`/api/public/menu/${restaurantSlug}`);
+export const getPublicMenu = (restaurantSlug, tableId = null) =>
+  api.get(`/api/public/menu/${restaurantSlug}${tableId ? `?tableId=${tableId}` : ''}`);
 
 // ── Customer Auth ─────────────────────────────────────────────
 export const sendOtp = (phoneNumber) =>
@@ -44,4 +44,11 @@ export const placeOrder = (data) =>
 export const getOrder = (orderId) =>
   api.get(`/api/orders/${orderId}`);
 
+export const getSessionOrders = (tableId) =>
+  api.get(`/api/orders/session/${tableId}`);
+
+export const requestBill = (tableId) =>
+  api.post(`/api/orders/request-bill`, { tableId });
+
 export default api;
+

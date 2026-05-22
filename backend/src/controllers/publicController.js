@@ -31,6 +31,17 @@ exports.getPublicMenu = async (req, res, next) => {
       }
     });
 
+    let tableNumber = null;
+    const { tableId } = req.query;
+    if (tableId) {
+      const table = await prisma.table.findUnique({
+        where: { id: tableId, restaurantId: restaurant.id }
+      });
+      if (table) {
+        tableNumber = table.tableNumber;
+      }
+    }
+
     return sendSuccess(res, 200, 'Menu fetched successfully', {
       restaurant: {
         id: restaurant.id,
@@ -39,7 +50,8 @@ exports.getPublicMenu = async (req, res, next) => {
         phone: restaurant.phone,
         address: restaurant.address
       },
-      categories
+      categories,
+      tableNumber
     });
   } catch (error) {
     next(error);

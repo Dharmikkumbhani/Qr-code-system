@@ -124,25 +124,53 @@
 }
 
 /* ─── Order Items ────────────────────────────────────────────── */
-.success-items {
+.success-orders-container {
   width: 100%;
   max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.order-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
-.success-items__title {
-  font-size: 0.8rem;
+.order-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-card__title {
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+}
+
+.order-card__status {
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.order-card__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .success-item {
@@ -164,14 +192,26 @@
   white-space: nowrap;
 }
 
-.success-total {
+.success-total-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card-bg);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  align-items: center;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text);
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.1);
+  margin-top: 4px;
+}
+
+.success-total-card span:last-child {
+  font-size: 1.25rem;
+  color: var(--accent);
 }
 
 /* ─── Polling indicator ──────────────────────────────────────── */

@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { getPublicMenu } from '../api/index';
+import { getPublicMenu, getSessionOrders } from '../api/index';
 import MenuItem from '../components/MenuItem';
 import CategoryTabs from '../components/CategoryTabs';
 import CartBar from '../components/CartBar';
 import CheckoutModal from '../components/CheckoutModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import HomeTab from '../components/tabs/HomeTab';
+import OrdersTab from '../components/tabs/OrdersTab';
+import CheckoutTab from '../components/tabs/CheckoutTab';
 import './MenuPage.css';
 
 export default function MenuPage() {
@@ -14,16 +17,42 @@ export default function MenuPage() {
   const tableId = searchParams.get('t') || searchParams.get('tableId');
 
   const [restaurant, setRestaurant] = useState(null);
+  const [tableNumber, setTableNumber] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeCategory, setActiveCategory] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('menu'); // 'home' | 'menu' | 'orders' | 'paybill'
+  const [activeTab, setActiveTab] = useState('home'); // default to 'home'
+  
+  const [orders, setOrders] = useState([]);
+  const pollRef = useRef(null);
 
   const sectionRefs = useRef({});
   const scrollingRef = useRef(false);
+
+  // Scroll to top on tab change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+
+  // Fetch session orders globally so tabs open instantly
+  const fetchOrders = useCallback(async () => {
+    if (!tableId) return;
+    try {
+      const { data } = await getSessionOrders(tableId);
+      setOrders(data.data);
+    } catch (err) {
+      // suppress 401 or network errors gracefully in background
+    }
+  }, [tableId]);
+
+  useEffect(() => {
+    fetchOrders();
+    pollRef.current = setInterval(fetchOrders, 10000);
+    return () => clearInterval(pollRef.current);
+  }, [fetchOrders]);
 
   useEffect(() => {
     if (!restaurantSlug) {
@@ -32,9 +61,12 @@ export default function MenuPage() {
       return;
     }
 
-    getPublicMenu(restaurantSlug)
+    getPublicMenu(restaurantSlug, tableId)
       .then(({ data }) => {
         setRestaurant(data.data.restaurant);
+        if (data.data.tableNumber) {
+          setTableNumber(data.data.tableNumber);
+        }
         const cats = data.data.categories.filter((c) => c.menuItems.length > 0);
         setCategories(cats);
         if (cats.length > 0) setActiveCategory(cats[0].id);
@@ -86,7 +118,9 @@ export default function MenuPage() {
     }))
     .filter((cat) => cat.menuItems.length > 0);
 
-  const tableLabel = tableId ? `T${tableId.slice(-4).toUpperCase()}` : 'T—';
+  const tableLabel = tableNumber 
+    ? `T${tableNumber.replace(/table\s*/i, '').trim()}` 
+    : (tableId ? `T${tableId.slice(-4).toUpperCase()}` : 'T—');
 
   if (loading) return <LoadingSpinner fullscreen />;
 
@@ -143,73 +177,96 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {/* Search bar */}
-        <div className="menu-search-wrap">
-          <svg className="menu-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <input
-            className="menu-search"
-            type="search"
-            placeholder="Search item"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            id="menu-search-input"
-          />
-        </div>
-
-        {/* Category Tabs */}
-        <CategoryTabs
-          categories={categories}
-          activeId={activeCategory}
-          onSelect={handleCategorySelect}
-        />
+        {/* Search bar & Categories (only visible in Menu tab) */}
+        {activeTab === 'menu' && (
+          <>
+            <div className="menu-search-wrap">
+              <svg className="menu-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="11" cy="11" r="8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <input
+                className="menu-search"
+                type="search"
+                placeholder="Search item"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                id="menu-search-input"
+              />
+            </div>
+            <CategoryTabs
+              categories={categories}
+              activeId={activeCategory}
+              onSelect={handleCategorySelect}
+            />
+          </>
+        )}
       </header>
 
-      {/* ── Menu Sections ──────────────────────────────── */}
+      {/* ── Main Content ──────────────────────────────── */}
       <main className="menu-main">
-        {filteredCategories.length === 0 ? (
-          <div className="menu-empty">
-            <p>No items found{searchQuery ? ` for "${searchQuery}"` : '.'}</p>
-          </div>
-        ) : (
-          filteredCategories.map((cat) => (
-            <section
-              key={cat.id}
-              ref={(el) => (sectionRefs.current[cat.id] = el)}
-              className="menu-section"
-            >
-              <div className="menu-section__header">
-                <h2 className="menu-section__title">
-                  {cat.name}
-                  <span className="menu-section__count">&nbsp;({cat.menuItems.length})</span>
-                </h2>
-                <svg className="menu-section__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-
-              <div className="menu-section__list">
-                {cat.menuItems.map((item) => (
-                  <MenuItem key={item.id} item={item} />
-                ))}
-              </div>
-            </section>
-          ))
+        {activeTab === 'home' && (
+          <HomeTab restaurant={restaurant} tableId={tableId} tableNumber={tableNumber} />
+        )}
+        
+        {activeTab === 'orders' && (
+          <OrdersTab 
+            orders={orders}
+            onGoToMenu={() => setActiveTab('menu')} 
+          />
+        )}
+        
+        {activeTab === 'paybill' && (
+          <CheckoutTab tableId={tableId} orders={orders} restaurant={restaurant} />
         )}
 
-        {/* Bottom spacing for CartBar + BottomNav */}
-        <div style={{ height: '140px' }} />
+        {activeTab === 'menu' && (
+          <>
+            {filteredCategories.length === 0 ? (
+              <div className="menu-empty">
+                <p>No items found{searchQuery ? ` for "${searchQuery}"` : '.'}</p>
+              </div>
+            ) : (
+              filteredCategories.map((cat) => (
+                <section
+                  key={cat.id}
+                  ref={(el) => (sectionRefs.current[cat.id] = el)}
+                  className="menu-section"
+                >
+                  <div className="menu-section__header">
+                    <h2 className="menu-section__title">
+                      {cat.name}
+                      <span className="menu-section__count">&nbsp;({cat.menuItems.length})</span>
+                    </h2>
+                    <svg className="menu-section__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+
+                  <div className="menu-section__list">
+                    {cat.menuItems.map((item) => (
+                      <MenuItem key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              ))
+            )}
+            {/* Bottom spacing for CartBar + BottomNav */}
+            <div style={{ height: '140px' }} />
+          </>
+        )}
       </main>
 
       {/* ── Cart Bar ───────────────────────────────────── */}
-      <CartBar onPlaceOrder={() => setIsModalOpen(true)} />
+      {activeTab === 'menu' && (
+        <CartBar onPlaceOrder={() => setIsModalOpen(true)} />
+      )}
 
       {/* ── Checkout Modal ─────────────────────────────── */}
       <CheckoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onSuccess={() => setActiveTab('orders')}
         restaurantId={restaurant?.id}
         restaurantSlug={restaurantSlug}
       />
@@ -264,7 +321,7 @@ export default function MenuPage() {
             <rect x="2" y="5" width="20" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M2 10h20" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span>Pay Bill</span>
+          <span>Request Bill</span>
         </button>
       </nav>
     </div>

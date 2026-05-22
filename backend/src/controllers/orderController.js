@@ -142,3 +142,80 @@ exports.getOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// GET /api/orders/session/:tableId
+exports.getSessionOrders = async (req, res, next) => {
+  try {
+    const { tableId } = req.params;
+    const customerId = req.customer.id;
+
+    // Get all orders for this customer at this table from today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const orders = await prisma.order.findMany({
+      where: {
+        tableId,
+        customerId,
+        createdAt: {
+          gte: startOfDay
+        }
+      },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: {
+              select: { name: true, imageUrl: true, price: true }
+            }
+          }
+        },
+        table: { select: { tableNumber: true } },
+        restaurant: { select: { name: true } }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return sendSuccess(res, 200, 'Session orders fetched successfully', orders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/orders/request-bill
+// Body: { tableId }
+exports.requestBill = async (req, res, next) => {
+  try {
+    const { tableId } = req.body;
+    const customerId = req.customer.id;
+
+    if (!tableId) {
+      return next(new AppError('Table ID is required', 400));
+    }
+
+    // Get the table to find the restaurantId
+    const table = await prisma.table.findUnique({
+      where: { id: tableId }
+    });
+
+    if (!table) {
+      return next(new AppError('Table not found', 404));
+    }
+
+    // You could also update the session or log the request in the DB here if needed.
+    // For now, emitting the socket event is sufficient.
+
+    if (req.io) {
+      req.io.to(`restaurant_${table.restaurantId}`).emit('billRequested', { 
+        tableId: table.id, 
+        tableNumber: table.tableNumber,
+        customerId 
+      });
+    }
+
+    return sendSuccess(res, 200, 'Bill requested successfully');
+  } catch (error) {
+    next(error);
+  }
+};

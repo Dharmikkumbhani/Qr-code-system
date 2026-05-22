@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { getOrder } from '../api/index';
+import { getSessionOrders } from '../api/index';
 import './OrderSuccess.css';
 
 const STATUS_CONFIG = {
@@ -18,39 +18,50 @@ export default function OrderSuccess() {
   const restaurantSlug = searchParams.get('restaurantSlug');
   const tableId = searchParams.get('tableId');
 
-  const [order, setOrder] = useState(null);
-  const [status, setStatus] = useState('PENDING');
+  const [orders, setOrders] = useState([]);
   const [error, setError] = useState('');
   const pollRef = useRef(null);
 
-  const fetchOrder = async () => {
+  const fetchOrders = async () => {
+    if (!tableId) return;
     try {
-      const { data } = await getOrder(orderId);
-      const o = data.data;
-      setOrder(o);
-      setStatus(o.status);
-      // Stop polling once completed or cancelled
-      if (o.status === 'COMPLETED' || o.status === 'CANCELLED') {
+      const { data } = await getSessionOrders(tableId);
+      const fetchedOrders = data.data;
+      setOrders(fetchedOrders);
+      
+      // Stop polling if ALL orders are completed/cancelled
+      const allDone = fetchedOrders.length > 0 && fetchedOrders.every(
+        o => o.status === 'COMPLETED' || o.status === 'CANCELLED'
+      );
+      if (allDone) {
         clearInterval(pollRef.current);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not fetch order status.');
+      setError(err.response?.data?.message || 'Could not fetch orders.');
       clearInterval(pollRef.current);
     }
   };
 
   useEffect(() => {
-    fetchOrder();
-    pollRef.current = setInterval(fetchOrder, 10000);
+    fetchOrders();
+    pollRef.current = setInterval(fetchOrders, 10000);
     return () => clearInterval(pollRef.current);
-  }, [orderId]);
-
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
-  const shortId = orderId ? orderId.slice(-8).toUpperCase() : '—';
+  }, [tableId]);
 
   const handleOrderMore = () => {
     navigate(`/menu/${restaurantSlug}?t=${tableId}`);
   };
+
+  const totalAmount = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
+  const currentOrder = orders.find(o => o.id === orderId) || orders[0];
+  const shortId = currentOrder ? currentOrder.id.slice(-8).toUpperCase() : '—';
+  
+  // Overall status could be the status of the current order
+  const overallStatus = currentOrder ? currentOrder.status : 'PENDING';
+  const cfg = STATUS_CONFIG[overallStatus] || STATUS_CONFIG.PENDING;
+
+  // Check if any order is still processing
+  const anyProcessing = orders.some(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
 
   return (
     <div className="success-page fade-up">
@@ -63,9 +74,9 @@ export default function OrderSuccess() {
       </div>
 
       <h1 className="success-title">Order Placed!</h1>
-      <p className="success-order-id">Order #{shortId}</p>
+      <p className="success-order-id">Latest Order #{shortId}</p>
 
-      {/* Status Badge */}
+      {/* Main Status Badge */}
       <div className={`status-badge ${cfg.cls}`}>
         <span className="status-badge__label">{cfg.label}</span>
         <span className="status-badge__desc">{cfg.desc}</span>
@@ -74,26 +85,41 @@ export default function OrderSuccess() {
       {error && <p className="error-msg" style={{ margin: '0 24px' }}>{error}</p>}
 
       {/* Order Items Summary */}
-      {order?.orderItems && (
-        <div className="success-items">
-          <h3 className="success-items__title">Your Order</h3>
-          {order.orderItems.map((item) => (
-            <div key={item.id} className="success-item">
-              <span className="success-item__name">{item.menuItem?.name}</span>
-              <span className="success-item__meta">
-                x{item.quantity} · ₹{(parseFloat(item.unitPrice) * item.quantity).toFixed(0)}
-              </span>
-            </div>
-          ))}
-          <div className="success-total">
-            <span>Total</span>
-            <span>₹{parseFloat(order.totalAmount).toFixed(0)}</span>
+      {orders.length > 0 && (
+        <div className="success-orders-container">
+          
+          {orders.map(o => {
+            const oCfg = STATUS_CONFIG[o.status] || STATUS_CONFIG.PENDING;
+            return (
+              <div key={o.id} className="order-card">
+                <div className="order-card__header">
+                  <span className="order-card__title">Order #{o.id.slice(-8).toUpperCase()}</span>
+                  <span className={`order-card__status ${oCfg.cls}`}>{oCfg.label}</span>
+                </div>
+                
+                <div className="order-card__items">
+                  {o.orderItems.map((item) => (
+                    <div key={item.id} className="success-item">
+                      <span className="success-item__name">{item.menuItem?.name}</span>
+                      <span className="success-item__meta">
+                        x{item.quantity} · ₹{(parseFloat(item.unitPrice) * item.quantity).toFixed(0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          
+          <div className="success-total-card">
+            <span>Total Payable</span>
+            <span>₹{totalAmount.toFixed(0)}</span>
           </div>
         </div>
       )}
 
       {/* Polling indicator */}
-      {status !== 'COMPLETED' && status !== 'CANCELLED' && (
+      {anyProcessing && (
         <p className="success-polling">
           <span className="pulse-dot" /> Checking status automatically…
         </p>

@@ -6,12 +6,13 @@ import { useCart } from '../context/CartContext';
 import LoadingSpinner from './LoadingSpinner';
 import './CheckoutModal.css';
 
-export default function CheckoutModal({ isOpen, onClose, restaurantId, restaurantSlug }) {
-  const navigate = useNavigate();
+export default function CheckoutModal({ isOpen, onClose, onSuccess, restaurantId, restaurantSlug }) {
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get('t') || searchParams.get('tableId');
 
-  const { setAuth } = useAuth();
+  const { customer, token, setAuth, logout } = useAuth();
+  const isAuthenticated = !!(customer && token);
+
   const { items, total, clearCart } = useCart();
 
   const [step, setStep] = useState(1); // 1 = details, 2 = OTP
@@ -136,9 +137,39 @@ export default function CheckoutModal({ isOpen, onClose, restaurantId, restauran
 
       const { data: orderRes } = await placeOrder(orderPayload);
       clearCart();
-      navigate(`/order/${orderRes.data.id}?restaurantSlug=${restaurantSlug}&tableId=${tableId}`);
+      if (onSuccess) onSuccess();
+      onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickOrder = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const orderPayload = {
+        restaurantId,
+        tableId,
+        items: items.map((i) => ({
+          menuItemId: i.menuItemId,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          specialInstructions: i.specialInstructions || '',
+        })),
+      };
+
+      const { data: orderRes } = await placeOrder(orderPayload);
+      clearCart();
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      if (err.response?.status === 401) logout();
     } finally {
       setLoading(false);
     }
@@ -176,8 +207,34 @@ export default function CheckoutModal({ isOpen, onClose, restaurantId, restauran
 
         {error && <p className="error-msg" style={{ margin: '0 20px' }}>{error}</p>}
 
-        {/* Step 1 — Details */}
-        {step === 1 && (
+        {/* Authenticated Fast Checkout */}
+        {isAuthenticated ? (
+          <form className="modal-form" onSubmit={handleQuickOrder}>
+            <div className="modal-field" style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <p style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text)' }}>
+                Ordering as <strong>{customer.name}</strong>
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--text-light)' }}>
+                +91 {customer.phoneNumber}
+              </p>
+              <button 
+                type="button" 
+                className="btn-ghost" 
+                style={{ marginTop: '10px', fontSize: '0.85rem' }}
+                onClick={() => { logout(); setStep(1); }}
+              >
+                Not you? Change number
+              </button>
+            </div>
+            
+            <button className="btn-primary" type="submit" disabled={loading}>
+              {loading ? <LoadingSpinner /> : 'Place Order Now'}
+            </button>
+          </form>
+        ) : (
+          <>
+            {/* Step 1 — Details */}
+            {step === 1 && (
           <form className="modal-form" onSubmit={handleSendOtp}>
             <div className="modal-field">
               <label className="modal-label">Your Name</label>
@@ -257,6 +314,8 @@ export default function CheckoutModal({ isOpen, onClose, restaurantId, restauran
               ← Change number
             </button>
           </form>
+        )}
+          </>
         )}
       </div>
     </div>

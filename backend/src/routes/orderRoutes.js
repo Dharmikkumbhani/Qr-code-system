@@ -8,6 +8,8 @@ const router = express.Router();
 router.use(protectCustomer);
 
 router.post('/', orderController.placeOrder);
+router.post('/request-bill', orderController.requestBill);
+router.get('/session/:tableId', orderController.getSessionOrders);
 router.get('/:orderId', orderController.getOrder);
 
 module.exports = router;

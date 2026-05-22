@@ -19,15 +19,8 @@ export default function MenuItem({ item }) {
 
   return (
     <div className="menu-item">
-      {/* Left: veg indicator + info */}
+      {/* Left: item info */}
       <div className="menu-item__info">
-        {/* Veg / Non-veg square icon (Indian standard) */}
-        <span
-          className={`menu-item__veg-icon ${item.isVeg ? 'menu-item__veg-icon--veg' : 'menu-item__veg-icon--nonveg'}`}
-          title={item.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}
-        >
-          <span className="menu-item__veg-dot" />
-        </span>
 
         <h3 className="menu-item__name">{item.name}</h3>
 

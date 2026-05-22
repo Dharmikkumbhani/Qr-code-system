@@ -11,9 +11,18 @@ export function AuthProvider({ children }) {
     try {
       const savedToken = localStorage.getItem('customer_token');
       const savedCustomer = localStorage.getItem('customer_info');
-      if (savedToken && savedCustomer) {
-        setToken(savedToken);
-        setCustomer(JSON.parse(savedCustomer));
+      const savedExpiry = localStorage.getItem('customer_token_expiry');
+
+      if (savedToken && savedCustomer && savedExpiry) {
+        if (Date.now() < parseInt(savedExpiry, 10)) {
+          setToken(savedToken);
+          setCustomer(JSON.parse(savedCustomer));
+        } else {
+          // Token expired, clear it
+          localStorage.removeItem('customer_token');
+          localStorage.removeItem('customer_info');
+          localStorage.removeItem('customer_token_expiry');
+        }
       }
     } catch {
       // ignore parse errors
@@ -23,8 +32,12 @@ export function AuthProvider({ children }) {
   const setAuth = ({ customer: c, token: t }) => {
     setCustomer(c);
     setToken(t);
+    // Set expiry to 2 hours from now (2 * 60 * 60 * 1000)
+    const expiry = Date.now() + 2 * 60 * 60 * 1000;
+    
     localStorage.setItem('customer_token', t);
     localStorage.setItem('customer_info', JSON.stringify(c));
+    localStorage.setItem('customer_token_expiry', expiry.toString());
   };
 
   const logout = () => {
@@ -32,6 +45,7 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('customer_token');
     localStorage.removeItem('customer_info');
+    localStorage.removeItem('customer_token_expiry');
   };
 
   return (
