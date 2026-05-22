@@ -26,8 +26,7 @@ const OrderCard = ({ order, onUpdateStatus, onPress }) => {
   };
 
   const getNextAction = (status) => {
-    if (status === 'PENDING') return { label: 'Accept Order', nextStatus: 'ACCEPTED' };
-    if (status === 'ACCEPTED') return { label: 'Mark Completed', nextStatus: 'COMPLETED' };
+    if (status === 'ACCEPTED' || status === 'PENDING') return { label: 'Checkout', nextStatus: 'COMPLETED' };
     return null;
   };
 
@@ -37,13 +36,18 @@ const OrderCard = ({ order, onUpdateStatus, onPress }) => {
   return (
     <TouchableOpacity style={styles.orderCard} activeOpacity={0.8} onPress={onPress}>
       <View style={styles.orderHeader}>
-        <View style={styles.tableBadge}>
-          <Text style={styles.tableBadgeText}>{order.table?.tableNumber || 'Table --'}</Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <View style={styles.tableBadge}>
+              <Text style={styles.tableBadgeText}>{order.table?.tableNumber || 'Table --'}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+            </View>
+          </View>
+          <Text style={styles.customerName}>{order.customer?.name || 'Walk-in Customer'}</Text>
         </View>
         <Text style={styles.timeText}>{timeElapsed}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
-        </View>
       </View>
 
       <View style={styles.itemsList}>
@@ -56,13 +60,13 @@ const OrderCard = ({ order, onUpdateStatus, onPress }) => {
                 <Text style={styles.itemNote}>Note: {item.specialInstructions}</Text>
               )}
             </View>
-            <Text style={styles.itemPrice}>${(item.quantity * item.unitPrice).toFixed(2)}</Text>
+            <Text style={styles.itemPrice}>₹{(item.quantity * item.unitPrice).toFixed(2)}</Text>
           </View>
         ))}
       </View>
 
       <View style={styles.orderFooter}>
-        <Text style={styles.totalText}>Total: <Text style={styles.totalAmount}>${parseFloat(order.totalAmount).toFixed(2)}</Text></Text>
+        <Text style={styles.totalText}>Total: <Text style={styles.totalAmount}>₹{parseFloat(order.totalAmount).toFixed(2)}</Text></Text>
         {action && (
           <TouchableOpacity 
             style={[styles.actionBtn, { backgroundColor: getStatusColor(order.status) }]}
@@ -135,9 +139,12 @@ const DashboardScreen = ({ navigation }) => {
       // Optimistic update
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       
-      await api.patch(`/restaurants/${restaurantId}/orders/${orderId}/status`, {
-        status: newStatus
-      });
+      const payload = { status: newStatus };
+      if (newStatus === 'COMPLETED') {
+        payload.paymentStatus = 'PAID';
+      }
+      
+      await api.patch(`/restaurants/${restaurantId}/orders/${orderId}/status`, payload);
     } catch (error) {
       console.error('Failed to update status:', error);
       // Revert on error (could be better handled)
@@ -271,6 +278,11 @@ const styles = StyleSheet.create({
   timeText: {
     color: Colors.textSecondary,
     fontSize: Typography.xs,
+  },
+  customerName: {
+    color: Colors.textPrimary,
+    fontSize: Typography.sm,
+    fontWeight: Typography.medium,
   },
   statusBadge: {
     paddingHorizontal: 10, paddingVertical: 4,

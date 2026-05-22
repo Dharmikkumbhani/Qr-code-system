@@ -65,7 +65,7 @@ exports.placeOrder = async (req, res, next) => {
           tableId,
           customerId,
           totalAmount: Math.round(totalAmount * 100) / 100,
-          status: 'PENDING',
+          status: 'ACCEPTED',
           paymentStatus: 'UNPAID',
           orderItems: {
             create: validatedItems

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { getPublicMenu, getSessionOrders } from '../api/index';
+import { getPublicMenu, getSessionOrders, placeOrder } from '../api/index';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import MenuItem from '../components/MenuItem';
 import CategoryTabs from '../components/CategoryTabs';
 import CartBar from '../components/CartBar';
@@ -15,6 +17,10 @@ export default function MenuPage() {
   const { slug: restaurantSlug } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get('t') || searchParams.get('tableId');
+
+  const { customer, token, logout } = useAuth();
+  const { items, clearCart } = useCart();
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [restaurant, setRestaurant] = useState(null);
   const [tableNumber, setTableNumber] = useState(null);
@@ -107,6 +113,39 @@ export default function MenuPage() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  const handlePlaceOrderClick = async () => {
+    if (customer && token) {
+      setIsPlacingOrder(true);
+      try {
+        const orderPayload = {
+          restaurantId: restaurant?.id,
+          tableId,
+          items: items.map((i) => ({
+            menuItemId: i.menuItemId,
+            quantity: i.quantity,
+            unitPrice: i.price,
+            specialInstructions: i.specialInstructions || '',
+          })),
+        };
+        await placeOrder(orderPayload);
+        clearCart();
+        fetchOrders();
+        setActiveTab('orders');
+      } catch (err) {
+        if (err.response?.status === 401) {
+          logout();
+          setIsModalOpen(true);
+        } else {
+          alert(err.response?.data?.message || 'Failed to place order. Please try again.');
+        }
+      } finally {
+        setIsPlacingOrder(false);
+      }
+    } else {
+      setIsModalOpen(true);
+    }
+  };
 
   // Filter items by search query
   const filteredCategories = categories
@@ -259,7 +298,7 @@ export default function MenuPage() {
 
       {/* ── Cart Bar ───────────────────────────────────── */}
       {activeTab === 'menu' && (
-        <CartBar onPlaceOrder={() => setIsModalOpen(true)} />
+        <CartBar onPlaceOrder={handlePlaceOrderClick} loading={isPlacingOrder} />
       )}
 
       {/* ── Checkout Modal ─────────────────────────────── */}

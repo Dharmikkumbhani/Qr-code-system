@@ -8,13 +8,15 @@ const USER_KEY = 'ownerUser';
 // Backend response: { success, message, data: { user, token } }
 export const loginOwner = async (email, password) => {
   const response = await api.post('/auth/login', { email, password });
-  const { user, token } = response.data.data;
-  if (token) {
-    await AsyncStorage.multiSet([
-      [TOKEN_KEY, token],
-      [USER_KEY, JSON.stringify(user)],
-    ]);
+  const data = response.data?.data;
+  if (!data || !data.user || !data.token) {
+    throw new Error(response.data?.message || 'Login failed: unexpected server response');
   }
+  const { user, token } = data;
+  await AsyncStorage.multiSet([
+    [TOKEN_KEY, token],
+    [USER_KEY, JSON.stringify(user)],
+  ]);
   return { user, token };
 };
 

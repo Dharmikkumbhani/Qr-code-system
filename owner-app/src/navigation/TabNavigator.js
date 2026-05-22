@@ -6,6 +6,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSys
 import DashboardStack  from './DashboardStack';   // nested stack for orders
 import MenuScreen      from '../screens/MenuScreen';
 import TablesScreen    from '../screens/TablesScreen';
+import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ProfileScreen   from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -15,6 +16,7 @@ const TAB_CONFIG = [
   { name: 'Dashboard', icon: '📋', label: 'Orders',  badge: true  },
   { name: 'Menu',      icon: '🍽️', label: 'Menu',    badge: false },
   { name: 'Tables',    icon: '🪑', label: 'Tables',  badge: false },
+  { name: 'Analytics', icon: '📈', label: 'Analytics',badge: false },
   { name: 'Profile',   icon: '👤', label: 'Profile', badge: false },
 ];
 
@@ -78,6 +80,7 @@ const TabNavigator = () => (
     <Tab.Screen name="Dashboard" component={DashboardStack} />
     <Tab.Screen name="Menu"      component={MenuScreen}     />
     <Tab.Screen name="Tables"    component={TablesScreen}   />
+    <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     <Tab.Screen name="Profile"   component={ProfileScreen}  />
   </Tab.Navigator>
 );

@@ -1,5 +1,6 @@
 const express = require('express');
 const restaurantController = require('../controllers/restaurantController');
+const { getAnalytics } = require('../controllers/analyticsController');
 const { protect, restrictTo } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -27,5 +28,9 @@ router.route('/:id/orders')
 
 router.route('/:id/orders/:orderId/status')
   .patch(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.updateOrderStatus);
+
+// Analytics
+router.route('/:id/analytics')
+  .get(restrictTo('SUPER_ADMIN', 'OWNER'), getAnalytics);
 
 module.exports = router;

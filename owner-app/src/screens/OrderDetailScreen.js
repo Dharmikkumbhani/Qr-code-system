@@ -23,32 +23,19 @@ const OrderDetailScreen = ({ route, navigation }) => {
   const finalTotal = parseFloat(order.totalAmount);
 
   const handleCheckout = async () => {
-    Alert.alert(
-      'Checkout & Clear Table',
-      `Mark Order #${order.id.slice(-6)} as COMPLETED and PAID?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Confirm', 
-          style: 'default',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await api.patch(`/restaurants/${order.restaurantId}/orders/${order.id}/status`, {
-                status: 'COMPLETED',
-                paymentStatus: 'PAID'
-              });
-              Alert.alert('Success', 'Order completed and table cleared.');
-              navigation.goBack();
-            } catch (error) {
-              console.error(error);
-              Alert.alert('Error', 'Failed to complete checkout.');
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    try {
+      setLoading(true);
+      await api.patch(`/restaurants/${order.restaurantId}/orders/${order.id}/status`, {
+        status: 'COMPLETED',
+        paymentStatus: 'PAID'
+      });
+      Alert.alert('Success', 'Order completed and table cleared.');
+      navigation.goBack();
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to complete checkout.');
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -64,11 +51,25 @@ const OrderDetailScreen = ({ route, navigation }) => {
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
         title={`Table ${order.table?.tableNumber || '--'}`}
-        subtitle={`Order #${order.id.slice(0, 8).toUpperCase()}`}
+        subtitle={order.customer?.name || 'Walk-in Customer'}
         showBack
       />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Spacing.xxl }}>
         
+        {/* Customer Info */}
+        <View style={styles.customerCard}>
+          <View style={styles.customerAvatar}>
+            <Text style={{ fontSize: 20 }}>👤</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.customerNameText}>{order.customer?.name || 'Walk-in Customer'}</Text>
+            {order.customer?.phoneNumber && (
+              <Text style={styles.customerPhone}>{order.customer.phoneNumber}</Text>
+            )}
+          </View>
+          <Text style={styles.orderIdText}>#{order.id.slice(-6).toUpperCase()}</Text>
+        </View>
+
         {/* Status Badge */}
         <View style={styles.statusRow}>
           <Text style={styles.sectionTitle}>Status</Text>
@@ -93,7 +94,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
                   )}
                 </View>
               </View>
-              <Text style={styles.itemPrice}>${(item.quantity * item.unitPrice).toFixed(2)}</Text>
+              <Text style={styles.itemPrice}>₹{(item.quantity * item.unitPrice).toFixed(2)}</Text>
             </View>
           ))}
         </View>
@@ -103,7 +104,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
           <Text style={styles.cardTitle}>Bill Summary</Text>
           <View style={[styles.summaryRow, styles.totalRow, { borderTopWidth: 0, paddingTop: 0, marginTop: 0 }]}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>${finalTotal.toFixed(2)}</Text>
+            <Text style={styles.totalValue}>₹{finalTotal.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -146,6 +147,40 @@ const styles = StyleSheet.create({
     fontSize: Typography.lg,
     fontWeight: Typography.bold,
     color: Colors.textPrimary,
+  },
+
+  customerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    borderWidth: 1, borderColor: Colors.border,
+    gap: 12,
+    ...Shadows.sm,
+  },
+  customerAvatar: {
+    width: 42, height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primaryGlow,
+    borderWidth: 1.5, borderColor: Colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  customerNameText: {
+    color: Colors.textPrimary,
+    fontSize: Typography.md,
+    fontWeight: Typography.bold,
+  },
+  customerPhone: {
+    color: Colors.textSecondary,
+    fontSize: Typography.xs,
+    marginTop: 2,
+  },
+  orderIdText: {
+    color: Colors.textMuted,
+    fontSize: Typography.xs,
+    fontWeight: Typography.medium,
   },
   statusBadge: {
     paddingHorizontal: 12, paddingVertical: 6,

@@ -159,6 +159,7 @@ exports.getRestaurantOrders = async (req, res, next) => {
       where: { restaurantId: id },
       include: {
         table: { select: { tableNumber: true } },
+        customer: { select: { name: true, phoneNumber: true } },
         orderItems: {
           include: {
             menuItem: { select: { name: true, price: true, imageUrl: true } }
@@ -201,6 +202,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       data,
       include: {
         table: { select: { tableNumber: true } },
+        customer: { select: { name: true, phoneNumber: true } },
         orderItems: {
           include: {
             menuItem: { select: { name: true, price: true, imageUrl: true } }
