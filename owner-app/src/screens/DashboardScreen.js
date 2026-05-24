@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSystem';
 import api from '../services/api';
@@ -44,6 +45,11 @@ const OrderCard = ({ order, onUpdateStatus, onPress }) => {
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
               <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
             </View>
+            {order.billRequested && (
+              <View style={[styles.statusBadge, { backgroundColor: Colors.error + '20' }]}>
+                <Text style={[styles.statusText, { color: Colors.error }]}>Bill Requested</Text>
+              </View>
+            )}
           </View>
           <Text style={styles.customerName}>{order.customer?.name || 'Walk-in Customer'}</Text>
         </View>
@@ -103,10 +109,18 @@ const DashboardScreen = ({ navigation }) => {
         socket.on('newOrder', (newOrder) => {
           setOrders(prev => [newOrder, ...prev]);
           setHasNewNotif(true);
+          Alert.alert('New Order! 🍽️', `A new order has been placed at ${newOrder.table?.tableNumber || 'a table'}.`);
         });
 
         socket.on('orderUpdated', (updatedOrder) => {
           setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+          Alert.alert('Items Added! 🍽️', `Customer at ${updatedOrder.table?.tableNumber || 'a table'} added more items.`);
+        });
+
+        socket.on('billRequested', (data) => {
+          setHasNewNotif(true);
+          Alert.alert('Bill Requested 🛎️', `${data.tableNumber} is ready to checkout!`);
+          setOrders(prev => prev.map(o => o.tableId === data.tableId && o.paymentStatus !== 'PAID' ? { ...o, billRequested: true } : o));
         });
       } else {
         setLoading(false);
@@ -134,6 +148,14 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      if (restaurantId) {
+        fetchOrders(restaurantId);
+      }
+    }, [restaurantId])
+  );
+
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       // Optimistic update
@@ -153,8 +175,8 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
-  const activeOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'ACCEPTED');
-  const completedCount = orders.filter(o => o.status === 'COMPLETED').length;
+  const activeOrders = orders.filter(o => o.paymentStatus !== 'PAID');
+  const completedCount = orders.filter(o => o.paymentStatus === 'PAID').length;
 
   return (
     <SafeAreaView style={styles.safe}>

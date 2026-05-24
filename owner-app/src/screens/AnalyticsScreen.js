@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSystem';
 import api from '../services/api';
@@ -17,27 +18,29 @@ const AnalyticsScreen = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const user = await getStoredUser();
-        if (user?.restaurants && user.restaurants.length > 0) {
-          const rId = user.restaurants[0].id;
-          const response = await api.get(`/restaurants/${rId}/analytics`);
-          if (response.data.success) {
-            setData(response.data.data);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchAnalytics = async () => {
+        try {
+          const user = await getStoredUser();
+          if (user?.restaurants && user.restaurants.length > 0) {
+            const rId = user.restaurants[0].id;
+            const response = await api.get(`/restaurants/${rId}/analytics`);
+            if (response.data.success) {
+              setData(response.data.data);
+            }
           }
+        } catch (error) {
+          console.error('Failed to fetch analytics:', error);
+          Alert.alert('Error', 'Could not load analytics data.');
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Failed to fetch analytics:', error);
-        Alert.alert('Error', 'Could not load analytics data.');
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchAnalytics();
-  }, []);
+      fetchAnalytics();
+    }, [])
+  );
 
   if (loading) {
     return (

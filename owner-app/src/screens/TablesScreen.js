@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../theme/designSystem';
 import api from '../services/api';
 import { getStoredUser } from '../services/authService';
@@ -27,6 +28,9 @@ const TablesScreen = ({ navigation }) => {
         socket.on('orderUpdated', () => {
           fetchTables(rId); // Re-fetch to update table occupation if completed
         });
+        socket.on('billRequested', () => {
+          fetchTables(rId); 
+        });
 
       } else {
         setLoading(false);
@@ -50,6 +54,14 @@ const TablesScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (restaurantId) {
+        fetchTables(restaurantId);
+      }
+    }, [restaurantId])
+  );
 
   const occupiedCount = tables.filter(t => t.orders && t.orders.length > 0).length;
   const freeCount = tables.length - occupiedCount;

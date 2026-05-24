@@ -57,50 +57,98 @@ exports.placeOrder = async (req, res, next) => {
       });
     }
 
+    // Check for an existing UNPAID order for this customer at this table (Option 4: Master Order)
+    const existingOrder = await prisma.order.findFirst({
+      where: {
+        tableId,
+        customerId,
+        paymentStatus: 'UNPAID'
+      }
+    });
+
     // Create order with items in a transaction
     const order = await prisma.$transaction(async (tx) => {
-      const newOrder = await tx.order.create({
-        data: {
-          restaurantId,
-          tableId,
-          customerId,
-          totalAmount: Math.round(totalAmount * 100) / 100,
-          status: 'ACCEPTED',
-          paymentStatus: 'UNPAID',
-          orderItems: {
-            create: validatedItems
-          }
-        },
-        include: {
-          orderItems: {
-            include: {
-              menuItem: {
-                select: { name: true, imageUrl: true }
-              }
+      if (existingOrder) {
+        // Append to existing order
+        const updatedOrder = await tx.order.update({
+          where: { id: existingOrder.id },
+          data: {
+            totalAmount: Math.round((parseFloat(existingOrder.totalAmount) + totalAmount) * 100) / 100,
+            status: 'PENDING',
+            orderItems: {
+              create: validatedItems
             }
           },
-          table: { select: { tableNumber: true } }
-        }
-      });
-
-      return newOrder;
+          include: {
+            orderItems: {
+              include: {
+                menuItem: {
+                  select: { name: true, imageUrl: true }
+                }
+              }
+            },
+            table: { select: { tableNumber: true } }
+          }
+        });
+        return updatedOrder;
+      } else {
+        // Create new order
+        const newOrder = await tx.order.create({
+          data: {
+            restaurantId,
+            tableId,
+            customerId,
+            totalAmount: Math.round(totalAmount * 100) / 100,
+            status: 'PENDING',
+            paymentStatus: 'UNPAID',
+            orderItems: {
+              create: validatedItems
+            }
+          },
+          include: {
+            orderItems: {
+              include: {
+                menuItem: {
+                  select: { name: true, imageUrl: true }
+                }
+              }
+            },
+            table: { select: { tableNumber: true } }
+          }
+        });
+        return newOrder;
+      }
     });
 
     // Emit socket event to the restaurant's room
     if (req.io) {
-      req.io.to(`restaurant_${restaurantId}`).emit('newOrder', order);
+      if (existingOrder) {
+        req.io.to(`restaurant_${restaurantId}`).emit('orderUpdated', order);
+      } else {
+        req.io.to(`restaurant_${restaurantId}`).emit('newOrder', order);
+      }
     }
 
     // Send push notification to the owner if they have a push token
     if (restaurant.owner?.pushToken) {
       const { sendPushNotification } = require('../services/pushService');
       const tableNumber = order.table?.tableNumber || 'a table';
-      sendPushNotification(
-        restaurant.owner.pushToken,
-        'New Order Received! 🍽️',
-        `A new order has been placed at ${tableNumber}.`,
-        { orderId: order.id }
-      );
+      
+      if (existingOrder) {
+        sendPushNotification(
+          restaurant.owner.pushToken,
+          'Items Added! 🍽️',
+          `Customer at ${tableNumber} added more items to their order.`,
+          { orderId: order.id }
+        );
+      } else {
+        sendPushNotification(
+          restaurant.owner.pushToken,
+          'New Order Received! 🍽️',
+          `A new order has been placed at ${tableNumber}.`,
+          { orderId: order.id }
+        );
+      }
     }
 
     return sendSuccess(res, 201, 'Order placed successfully', order);
@@ -149,17 +197,12 @@ exports.getSessionOrders = async (req, res, next) => {
     const { tableId } = req.params;
     const customerId = req.customer.id;
 
-    // Get all orders for this customer at this table from today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
+    // Get all UNPAID orders for this customer at this table (Option 3: Payment Status Filter)
     const orders = await prisma.order.findMany({
       where: {
         tableId,
         customerId,
-        createdAt: {
-          gte: startOfDay
-        }
+        paymentStatus: 'UNPAID'
       },
       include: {
         orderItems: {

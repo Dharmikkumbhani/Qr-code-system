@@ -87,7 +87,7 @@ exports.getTables = async (req, res, next) => {
       include: {
         orders: {
           where: {
-            status: { in: ['PENDING', 'ACCEPTED'] }
+            paymentStatus: 'UNPAID'
           },
           take: 1
         }
@@ -155,8 +155,18 @@ exports.getRestaurantOrders = async (req, res, next) => {
       }
     }
 
+    // Fetch active (UNPAID) orders or orders created TODAY
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
     const orders = await prisma.order.findMany({
-      where: { restaurantId: id },
+      where: { 
+        restaurantId: id,
+        OR: [
+          { paymentStatus: 'UNPAID' },
+          { createdAt: { gte: startOfDay } }
+        ]
+      },
       include: {
         table: { select: { tableNumber: true } },
         customer: { select: { name: true, phoneNumber: true } },
