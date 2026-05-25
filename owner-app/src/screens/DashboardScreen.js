@@ -114,7 +114,7 @@ const DashboardScreen = ({ navigation }) => {
 
         socket.on('orderUpdated', (updatedOrder) => {
           setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-          Alert.alert('Items Added! 🍽️', `Customer at ${updatedOrder.table?.tableNumber || 'a table'} added more items.`);
+          // Alert.alert('Items Added! 🍽️', `Customer at ${updatedOrder.table?.tableNumber || 'a table'} added more items.`);
         });
 
         socket.on('billRequested', (data) => {

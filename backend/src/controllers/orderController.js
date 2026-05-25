@@ -80,6 +80,7 @@ exports.placeOrder = async (req, res, next) => {
             }
           },
           include: {
+            customer: { select: { name: true, phoneNumber: true } },
             orderItems: {
               include: {
                 menuItem: {
@@ -106,6 +107,7 @@ exports.placeOrder = async (req, res, next) => {
             }
           },
           include: {
+            customer: { select: { name: true, phoneNumber: true } },
             orderItems: {
               include: {
                 menuItem: {
