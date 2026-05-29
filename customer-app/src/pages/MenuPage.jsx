@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getPublicMenu, getSessionOrders, placeOrder } from '../api/index';
+import { initiateSocketConnection, disconnectSocket } from '../api/socket';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import MenuItem from '../components/MenuItem';
@@ -43,22 +44,45 @@ export default function MenuPage() {
     window.scrollTo(0, 0);
   }, [activeTab]);
 
-  // Fetch session orders globally so tabs open instantly
   const fetchOrders = useCallback(async () => {
     if (!tableId) return;
     try {
       const { data } = await getSessionOrders(tableId);
       setOrders(data.data);
+      return data.data;
     } catch (err) {
       // suppress 401 or network errors gracefully in background
+      return [];
     }
   }, [tableId]);
 
   useEffect(() => {
-    fetchOrders();
-    pollRef.current = setInterval(fetchOrders, 10000);
-    return () => clearInterval(pollRef.current);
-  }, [fetchOrders]);
+    let socket;
+    const initialize = async () => {
+      const fetchedOrders = await fetchOrders();
+      if (fetchedOrders && fetchedOrders.length > 0) {
+        const restaurantId = fetchedOrders[0].restaurantId;
+        socket = initiateSocketConnection(restaurantId);
+        
+        socket.off('orderUpdated');
+        socket.off('newOrder');
+
+        socket.on('orderUpdated', (updatedOrder) => {
+          if (updatedOrder.tableId === tableId) fetchOrders();
+        });
+        
+        socket.on('newOrder', (newOrder) => {
+          if (newOrder.tableId === tableId) fetchOrders();
+        });
+      }
+    };
+
+    initialize();
+
+    return () => {
+      disconnectSocket();
+    };
+  }, [fetchOrders, tableId]);
 
   useEffect(() => {
     if (!restaurantSlug) {

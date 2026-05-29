@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { getSessionOrders } from '../api/index';
+import { initiateSocketConnection, disconnectSocket } from '../api/socket';
 import './OrderSuccess.css';
 
 const STATUS_CONFIG = {
@@ -20,7 +21,6 @@ export default function OrderSuccess() {
 
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState('');
-  const pollRef = useRef(null);
 
   const fetchOrders = async () => {
     if (!tableId) return;
@@ -28,24 +28,39 @@ export default function OrderSuccess() {
       const { data } = await getSessionOrders(tableId);
       const fetchedOrders = data.data;
       setOrders(fetchedOrders);
-      
-      // Stop polling if ALL orders are completed/cancelled
-      const allDone = fetchedOrders.length > 0 && fetchedOrders.every(
-        o => o.status === 'COMPLETED' || o.status === 'CANCELLED'
-      );
-      if (allDone) {
-        clearInterval(pollRef.current);
-      }
+      return fetchedOrders;
     } catch (err) {
       setError(err.response?.data?.message || 'Could not fetch orders.');
-      clearInterval(pollRef.current);
+      return [];
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-    pollRef.current = setInterval(fetchOrders, 10000);
-    return () => clearInterval(pollRef.current);
+    let socket;
+    const initialize = async () => {
+      const fetchedOrders = await fetchOrders();
+      if (fetchedOrders && fetchedOrders.length > 0) {
+        const restaurantId = fetchedOrders[0].restaurantId;
+        socket = initiateSocketConnection(restaurantId);
+        
+        socket.off('orderUpdated');
+        socket.off('newOrder');
+
+        socket.on('orderUpdated', (updatedOrder) => {
+          if (updatedOrder.tableId === tableId) fetchOrders();
+        });
+        
+        socket.on('newOrder', (newOrder) => {
+          if (newOrder.tableId === tableId) fetchOrders();
+        });
+      }
+    };
+
+    initialize();
+
+    return () => {
+      disconnectSocket();
+    };
   }, [tableId]);
 
   const handleOrderMore = () => {

@@ -17,7 +17,6 @@ const TablesScreen = ({ navigation }) => {
       if (user?.restaurants && user.restaurants.length > 0) {
         const rId = user.restaurants[0].id;
         setRestaurantId(rId);
-        fetchTables(rId);
 
         // Optional: We can listen to socket events to live-update table occupation
         const socket = initiateSocketConnection(rId);

@@ -1,13 +1,9 @@
 import axios from 'axios';
 import { getStoredToken } from './authService';
-
-// Change this to your backend IP when testing on a physical device
-
-const BASE_URL = 'http://10.189.171.56:8081/api';
-
+import { API_BASE_URL } from '../config';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });

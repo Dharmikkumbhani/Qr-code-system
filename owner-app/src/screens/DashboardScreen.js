@@ -98,7 +98,6 @@ const DashboardScreen = ({ navigation }) => {
       if (user?.restaurants && user.restaurants.length > 0) {
         const rId = user.restaurants[0].id;
         setRestaurantId(rId);
-        fetchOrders(rId);
         
         // Setup Push Notifications
         registerForPushNotificationsAsync();
@@ -159,7 +158,16 @@ const DashboardScreen = ({ navigation }) => {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       // Optimistic update
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      setOrders(prev => prev.map(o => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            status: newStatus,
+            ...(newStatus === 'COMPLETED' ? { paymentStatus: 'PAID' } : {})
+          };
+        }
+        return o;
+      }));
       
       const payload = { status: newStatus };
       if (newStatus === 'COMPLETED') {

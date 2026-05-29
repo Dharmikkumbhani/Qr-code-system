@@ -9,14 +9,14 @@ export const initiateSocketConnection = (restaurantId) => {
   socket = io(SOCKET_URL);
   
   socket.on('connect', () => {
-    console.log('Connected to socket server');
+    console.log('Customer connected to socket server');
     if (restaurantId) {
       socket.emit('joinRestaurant', restaurantId);
     }
   });
 
   socket.on('disconnect', () => {
-    console.log('Disconnected from socket server');
+    console.log('Customer disconnected from socket server');
   });
 
   return socket;
