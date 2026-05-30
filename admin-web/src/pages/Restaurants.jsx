@@ -222,7 +222,7 @@ export default function Restaurants() {
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '6px 10px', fontSize: '0.8rem' }}
-                          onClick={() => openQr(r)}
+                          onClick={() => window.location.href = `/restaurants/${r.id}/qrcodes`}
                         >
                           <QrCode size={14} /> QR Codes
                         </button>
