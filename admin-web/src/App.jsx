@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Restaurants from './pages/Restaurants';
 import RestaurantMenu from './pages/RestaurantMenu';
+import RestaurantQRCodes from './pages/RestaurantQRCodes';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -38,6 +39,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RestaurantMenu />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/restaurants/:id/qrcodes" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RestaurantQRCodes />
                 </Layout>
               </ProtectedRoute>
             } 

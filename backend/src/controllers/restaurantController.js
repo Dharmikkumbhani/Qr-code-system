@@ -142,6 +142,53 @@ exports.generateTables = async (req, res, next) => {
   }
 };
 
+// DELETE a specific table
+exports.deleteTable = async (req, res, next) => {
+  try {
+    const { id, tableId } = req.params;
+
+    // Check if user is owner of this restaurant (unless SUPER_ADMIN)
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const restaurant = await prisma.restaurant.findUnique({ where: { id } });
+      if (!restaurant || restaurant.ownerId !== req.user.id) {
+        return next(new AppError('Not authorized to access this restaurant', 403));
+      }
+    }
+
+    // Check if table exists
+    const table = await prisma.table.findUnique({ where: { id: tableId, restaurantId: id } });
+    if (!table) {
+      return next(new AppError('Table not found', 404));
+    }
+
+    // Check if there are active orders
+    const activeOrders = await prisma.order.count({
+      where: {
+        tableId: tableId,
+        paymentStatus: 'UNPAID'
+      }
+    });
+
+    if (activeOrders > 0) {
+      return next(new AppError('Cannot delete a table with active unpaid orders.', 400));
+    }
+
+    // Attempt to delete.
+    try {
+      await prisma.table.delete({ where: { id: tableId } });
+    } catch (err) {
+      if (err.code === 'P2003') {
+        return next(new AppError('Cannot delete a table with existing orders. Close orders first or clean up database.', 400));
+      }
+      throw err;
+    }
+
+    return sendSuccess(res, 200, 'Table deleted successfully', null);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET orders for a restaurant (Owner)
 exports.getRestaurantOrders = async (req, res, next) => {
   try {
