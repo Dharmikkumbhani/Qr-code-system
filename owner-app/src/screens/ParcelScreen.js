@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity,
   TextInput, Modal, ActivityIndicator, Alert, Animated, RefreshControl,
-  KeyboardAvoidingView, Platform, Dimensions
+  KeyboardAvoidingView, Platform, Dimensions, ScrollView
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
@@ -19,10 +19,13 @@ const ParcelScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
   const [adding, setAdding] = useState(false);
   const [restaurantId, setRestaurantId] = useState(null);
+
+  // Menu & Cart State
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [cart, setCart] = useState({});
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [tick, setTick] = useState(0);
@@ -46,22 +49,30 @@ const ParcelScreen = () => {
     return { text: `${hrs}h ${remainMins}m`, color: Colors.error };
   };
 
-  const fetchParcels = useCallback(async (showFullLoader = false) => {
+  const fetchData = useCallback(async (showFullLoader = false) => {
     try {
       if (showFullLoader) setLoading(true);
       const user = await getStoredUser();
       if (user?.restaurants && user.restaurants.length > 0) {
         const rId = user.restaurants[0].id;
         setRestaurantId(rId);
-        const response = await api.get(`/restaurants/${rId}/parcels`);
-        if (response.data.success) {
-          setParcels(response.data.data.parcels);
-          setStats(response.data.data.stats);
+        
+        const [parcelRes, menuRes] = await Promise.all([
+          api.get(`/restaurants/${rId}/parcels`),
+          api.get(`/restaurants/${rId}/menu`)
+        ]);
+
+        if (parcelRes.data.success) {
+          setParcels(parcelRes.data.data.parcels);
+          setStats(parcelRes.data.data.stats);
+        }
+        if (menuRes.data.success) {
+          setCategories(menuRes.data.data.categories);
         }
       }
     } catch (error) {
-      console.error('Failed to fetch parcels:', error);
-      Alert.alert('Error', 'Could not load parcels.');
+      console.error('Failed to fetch data:', error);
+      Alert.alert('Error', 'Could not load data.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -70,7 +81,7 @@ const ParcelScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchParcels(true);
+      fetchData(true);
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
@@ -79,21 +90,45 @@ const ParcelScreen = () => {
     }, [])
   );
 
+  const updateCart = (item, delta) => {
+    setCart(prev => {
+      const currentQty = prev[item.id]?.quantity || 0;
+      const newQty = Math.max(0, currentQty + delta);
+      if (newQty === 0) {
+        const newCart = { ...prev };
+        delete newCart[item.id];
+        return newCart;
+      }
+      return { ...prev, [item.id]: { item, quantity: newQty } };
+    });
+  };
+
+  const getCartTotal = () => {
+    return Object.values(cart).reduce((sum, cartItem) => sum + (parseFloat(cartItem.item.price) * cartItem.quantity), 0);
+  };
+
+  const getCartDescription = () => {
+    return Object.values(cart).map(c => `${c.quantity}x ${c.item.name}`).join(', ');
+  };
+
   const handleAddParcel = async () => {
-    if (!description.trim()) {
-      Alert.alert('Required', 'Please enter a description of the parcel items.');
+    const desc = getCartDescription();
+    const totalAmount = getCartTotal();
+
+    if (!desc) {
+      Alert.alert('Empty Cart', 'Please add items to the parcel.');
       return;
     }
+    
     try {
       setAdding(true);
       await api.post(`/restaurants/${restaurantId}/parcels`, {
-        description: description.trim(),
-        amount: parseFloat(amount) || 0
+        description: desc,
+        amount: totalAmount
       });
-      setDescription('');
-      setAmount('');
+      setCart({}); // clear cart
       setShowAddModal(false);
-      fetchParcels();
+      fetchData();
     } catch (error) {
       console.error('Failed to add parcel:', error);
       Alert.alert('Error', 'Could not add parcel.');
@@ -105,7 +140,7 @@ const ParcelScreen = () => {
   const handleStatusUpdate = async (parcelId, newStatus) => {
     try {
       await api.patch(`/restaurants/${restaurantId}/parcels/${parcelId}/status`, { status: newStatus });
-      fetchParcels();
+      fetchData();
     } catch (error) {
       console.error('Failed to update parcel:', error);
       Alert.alert('Error', 'Could not update parcel status.');
@@ -284,90 +319,106 @@ const ParcelScreen = () => {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchParcels(); }}
+            onRefresh={() => { setRefreshing(true); fetchData(); }}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
           />
         }
       />
 
-      {/* ─── Add Parcel Modal ──────────────────────────────────────────── */}
-      <Modal
-        visible={showAddModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowAddModal(false)}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.modalContent}>
-              {/* Handle */}
-              <View style={styles.modalHandle} />
-
-              <Text style={styles.modalTitle}>New Parcel</Text>
-              <Text style={styles.modalSubtitle}>
-                Add items the customer wants for takeaway
-              </Text>
-
-              {/* Description Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>What does the customer want? *</Text>
-                <TextInput
-                  style={[styles.input, styles.inputMultiline]}
-                  placeholder="e.g. 2x Butter Chicken, 3x Naan, 1x Dal..."
-                  placeholderTextColor={Colors.textMuted}
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
+      {/* ─── POS Add Parcel Modal ──────────────────────────────────────── */}
+      <Modal visible={showAddModal} animationType="slide" transparent={true} onRequestClose={() => setShowAddModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.posModalOverlay}>
+          <View style={styles.posModalContainer}>
+            <View style={styles.posModalHeader}>
+              <View>
+                <Text style={styles.posModalTitle}>New Parcel</Text>
+                <Text style={styles.posModalSubtitle}>Select items for takeaway</Text>
               </View>
+              <TouchableOpacity onPress={() => setShowAddModal(false)} style={styles.posCloseBtn}>
+                <Text style={{ fontSize: 24, color: Colors.textMuted, fontWeight: 'bold' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-              {/* Amount Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Amount (₹)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0.00"
-                  placeholderTextColor={Colors.textMuted}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="numeric"
-                />
+            {/* Categories */}
+            <View style={styles.posCategoriesWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.posCategories}>
+                <TouchableOpacity
+                  style={[styles.posCatPill, activeCategory === 'All' && styles.posCatPillActive]}
+                  onPress={() => setActiveCategory('All')}
+                >
+                  <Text style={[styles.posCatText, activeCategory === 'All' && styles.posCatTextActive]}>All</Text>
+                </TouchableOpacity>
+                {categories.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.posCatPill, activeCategory === cat.id && styles.posCatPillActive]}
+                    onPress={() => setActiveCategory(cat.id)}
+                  >
+                    <Text style={[styles.posCatText, activeCategory === cat.id && styles.posCatTextActive]}>{cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Menu Items */}
+            <FlatList
+              data={activeCategory === 'All' ? categories.flatMap(c => c.menuItems) : categories.find(c => c.id === activeCategory)?.menuItems || []}
+              keyExtractor={item => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.posMenuList}
+              ListEmptyComponent={
+                <View style={styles.centered}><Text style={{color: Colors.textMuted, marginTop: 40}}>No items available.</Text></View>
+              }
+              renderItem={({ item }) => {
+                if (!item.isAvailable) return null;
+                return (
+                  <View style={styles.posMenuItem}>
+                    <View style={styles.posMenuItemInfo}>
+                      <View style={styles.posMenuTitleRow}>
+                        <View style={[styles.posVegBadge, { borderColor: item.isVeg ? Colors.success : Colors.error }]}>
+                          <View style={[styles.posVegDot, { backgroundColor: item.isVeg ? Colors.success : Colors.error }]} />
+                        </View>
+                        <Text style={styles.posMenuName}>{item.name}</Text>
+                      </View>
+                      <Text style={styles.posMenuPrice}>₹{parseFloat(item.price).toFixed(2)}</Text>
+                    </View>
+                    
+                    <View style={styles.posQuantityControl}>
+                      {cart[item.id] ? (
+                        <>
+                          <TouchableOpacity style={styles.posQtyBtn} onPress={() => updateCart(item, -1)}>
+                            <Text style={styles.posQtyBtnText}>-</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.posQtyText}>{cart[item.id].quantity}</Text>
+                          <TouchableOpacity style={styles.posQtyBtn} onPress={() => updateCart(item, 1)}>
+                            <Text style={styles.posQtyBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <TouchableOpacity style={styles.posAddBtn} onPress={() => updateCart(item, 1)}>
+                          <Text style={styles.posAddBtnText}>ADD</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              }}
+            />
+
+            {/* Cart Summary Footer */}
+            {Object.keys(cart).length > 0 && (
+              <View style={styles.posCartFooter}>
+                <View style={styles.posCartInfo}>
+                  <Text style={styles.posCartItemsText}>{Object.values(cart).reduce((s, c) => s + c.quantity, 0)} Items</Text>
+                  <Text style={styles.posCartTotalText}>₹{getCartTotal().toLocaleString()}</Text>
+                </View>
+                <TouchableOpacity style={styles.posSubmitBtn} onPress={handleAddParcel} disabled={adding}>
+                  {adding ? <ActivityIndicator color="#fff" /> : <Text style={styles.posSubmitText}>Confirm Parcel</Text>}
+                </TouchableOpacity>
               </View>
-
-              {/* Submit */}
-              <TouchableOpacity
-                style={[styles.submitBtn, adding && styles.submitBtnDisabled]}
-                onPress={handleAddParcel}
-                disabled={adding}
-                activeOpacity={0.8}
-              >
-                {adding ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitBtnText}>📦  Add Parcel</Text>
-                )}
-              </TouchableOpacity>
-
-              {/* Cancel */}
-              <TouchableOpacity
-                style={styles.cancelModalBtn}
-                onPress={() => setShowAddModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cancelModalText}>Cancel</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </TouchableOpacity>
+            )}
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -585,90 +636,197 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // ─── Modal ────────────────────────────────────────────────────────
-  modalOverlay: {
+  // ─── POS Modal Styles ──────────────────────────────────────────────────
+  posModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.4)',
+    backgroundColor: 'rgba(15,23,42,0.6)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: Colors.surface,
+  posModalContainer: {
+    backgroundColor: Colors.bg,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    padding: Spacing.xxl,
-    paddingBottom: Platform.OS === 'ios' ? 44 : Spacing.xxl,
+    height: '92%',
+    paddingTop: Spacing.lg,
   },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: Spacing.lg,
+  posModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  modalTitle: {
+  posModalTitle: {
     fontSize: Typography.xxl,
     fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: 4,
   },
-  modalSubtitle: {
+  posModalSubtitle: {
     fontSize: Typography.sm,
     fontWeight: '500',
     color: Colors.textMuted,
-    marginBottom: Spacing.xxl,
+    marginTop: 2,
   },
-  inputGroup: {
-    marginBottom: Spacing.lg,
+  posCloseBtn: {
+    padding: Spacing.sm,
   },
-  inputLabel: {
-    fontSize: Typography.xs,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
+  posCategoriesWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingVertical: Spacing.md,
   },
-  input: {
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: Radius.sm,
-    padding: Spacing.lg,
-    fontSize: Typography.md,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-    borderWidth: 1.5,
+  posCategories: {
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  posCatPill: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.full,
+    borderWidth: 1,
     borderColor: Colors.border,
   },
-  inputMultiline: {
-    minHeight: 80,
-    paddingTop: Spacing.md,
+  posCatPillActive: {
+    backgroundColor: Colors.primaryGlow,
+    borderColor: Colors.primary,
   },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.lg,
+  posCatText: {
+    fontSize: Typography.sm,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  posCatTextActive: {
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+  posMenuList: {
+    padding: Spacing.xl,
+    paddingBottom: 100,
+  },
+  posMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: Colors.surface,
+    padding: Spacing.lg,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.sm,
+  },
+  posMenuItemInfo: {
+    flex: 1,
+    paddingRight: Spacing.md,
+  },
+  posMenuTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  posVegBadge: {
+    width: 12, height: 12,
+    borderWidth: 1,
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 2,
+  },
+  posVegDot: {
+    width: 6, height: 6,
+    borderRadius: 3,
+  },
+  posMenuName: {
+    fontSize: Typography.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  posMenuPrice: {
+    fontSize: Typography.sm,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginLeft: 20,
+  },
+  posQuantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    height: 36,
+  },
+  posAddBtn: {
+    paddingHorizontal: Spacing.xl,
+    height: '100%',
     justifyContent: 'center',
-    marginTop: Spacing.sm,
+    backgroundColor: Colors.primaryGlow,
+    borderRadius: Radius.sm,
+  },
+  posAddBtnText: {
+    color: Colors.primary,
+    fontWeight: '800',
+    fontSize: Typography.sm,
+  },
+  posQtyBtn: {
+    width: 36,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  posQtyBtnText: {
+    fontSize: Typography.lg,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  posQtyText: {
+    fontSize: Typography.md,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  posCartFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0, right: 0,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    padding: Spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...Shadows.lg,
+  },
+  posCartInfo: {
+    flex: 1,
+  },
+  posCartItemsText: {
+    fontSize: Typography.xs,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  posCartTotalText: {
+    fontSize: Typography.xl,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  posSubmitBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
     ...Shadows.glow(),
   },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
+  posSubmitText: {
     color: '#fff',
     fontWeight: '800',
     fontSize: Typography.md,
-  },
-  cancelModalBtn: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    marginTop: Spacing.xs,
-  },
-  cancelModalText: {
-    color: Colors.textMuted,
-    fontWeight: '600',
-    fontSize: Typography.sm,
   },
 });
 
