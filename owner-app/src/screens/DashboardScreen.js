@@ -16,6 +16,19 @@ const NotifBell = ({ hasNew }) => (
   </TouchableOpacity>
 );
 
+// Calculate live waiting time from createdAt
+const getWaitingTime = (createdAt) => {
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return { text: 'Just now', color: '#10B981' };
+  if (mins < 10) return { text: `${mins} min`, color: '#10B981' };
+  if (mins < 20) return { text: `${mins} min`, color: '#B45309' };
+  if (mins < 60) return { text: `${mins} min`, color: '#DC2626' };
+  const hrs = Math.floor(mins / 60);
+  const remainMins = mins % 60;
+  return { text: `${hrs}h ${remainMins}m`, color: '#DC2626' };
+};
+
 const OrderCard = ({ order, onUpdateStatus, onPress }) => {
   const getStatusColor = (status) => {
     switch (status) {
@@ -53,7 +66,17 @@ const OrderCard = ({ order, onUpdateStatus, onPress }) => {
           </View>
           <Text style={styles.customerName}>{order.customer?.name || 'Walk-in Customer'}</Text>
         </View>
-        <Text style={styles.timeText}>{timeElapsed}</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={styles.timeText}>{timeElapsed}</Text>
+          {(() => {
+            const wait = getWaitingTime(order.createdAt);
+            return (
+              <View style={[styles.waitBadge, { backgroundColor: wait.color + '18' }]}>
+                <Text style={[styles.waitBadgeText, { color: wait.color }]}>⏱ {wait.text}</Text>
+              </View>
+            );
+          })()}
+        </View>
       </View>
 
       <View style={styles.itemsList}>
@@ -91,6 +114,13 @@ const DashboardScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState(null);
   const [hasNewNotif, setHasNewNotif] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  // Live timer — updates every 30s so "waiting X min" stays fresh
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
@@ -308,6 +338,16 @@ const styles = StyleSheet.create({
   timeText: {
     color: Colors.textSecondary,
     fontSize: Typography.xs,
+  },
+  waitBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    marginTop: 4,
+  },
+  waitBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   customerName: {
     color: Colors.textPrimary,

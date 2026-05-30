@@ -315,6 +315,36 @@ const AnalyticsScreen = () => {
           </View>
         </View>
 
+        {/* Parcel Analytics Section */}
+        {data?.parcelStats && (
+          <View style={[styles.card, FintechShadows.card]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>📦</Text>
+              <View>
+                <Text style={styles.cardTitle}>Parcel Analytics</Text>
+                <Text style={styles.cardSubtitle}>Takeaway Overview</Text>
+              </View>
+            </View>
+            <View style={{ gap: Spacing.md }}>
+              {[
+                { label: 'Today', data: data.parcelStats.today, color: FintechColors.primary },
+                { label: 'This Week', data: data.parcelStats.weekly, color: FintechColors.accentTeal },
+                { label: 'This Month', data: data.parcelStats.monthly, color: FintechColors.success },
+              ].map(({ label, data: pData, color }) => (
+                <View key={label} style={styles.parcelRow}>
+                  <View style={[styles.parcelDot, { backgroundColor: color }]} />
+                  <Text style={styles.parcelLabel}>{label}</Text>
+                  <View style={{ flex: 1 }} />
+                  <View style={styles.parcelBadge}>
+                    <Text style={styles.parcelBadgeText}>{pData?.totalCount || 0} parcels</Text>
+                  </View>
+                  <Text style={styles.parcelRevenue}>₹{(pData?.revenue || 0).toLocaleString()}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -482,7 +512,45 @@ const styles = StyleSheet.create({
     color: FintechColors.textSecondary,
     fontSize: Typography.sm,
     textAlign: 'center',
-  }
+  },
+
+  // Parcel Analytics
+  parcelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  parcelDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  parcelLabel: {
+    fontSize: Typography.sm,
+    fontWeight: '600',
+    color: FintechColors.textPrimary,
+  },
+  parcelBadge: {
+    backgroundColor: FintechColors.background,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.xs,
+    marginRight: Spacing.md,
+  },
+  parcelBadgeText: {
+    fontSize: Typography.xs,
+    fontWeight: '700',
+    color: FintechColors.textSecondary,
+  },
+  parcelRevenue: {
+    fontSize: Typography.sm,
+    fontWeight: '800',
+    color: FintechColors.textPrimary,
+    minWidth: 60,
+    textAlign: 'right',
+  },
 });
 
 export default AnalyticsScreen;

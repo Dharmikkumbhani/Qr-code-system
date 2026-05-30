@@ -22,6 +22,10 @@ router.route('/:id/tables')
 const menuRoutes = require('./menuRoutes');
 router.use('/:restaurantId/menu', menuRoutes);
 
+// Parcel Management
+const parcelRoutes = require('./parcelRoutes');
+router.use('/:id/parcels', parcelRoutes);
+
 // Orders Management
 router.route('/:id/orders')
   .get(restrictTo('SUPER_ADMIN', 'OWNER'), restaurantController.getRestaurantOrders);

@@ -166,6 +166,28 @@ exports.getAnalytics = async (req, res, next) => {
       value: count
     }));
 
+    // --- 7. Parcel Analytics ---
+    const getParcelStats = async (start, end) => {
+      const parcels = await prisma.parcel.findMany({
+        where: {
+          restaurantId,
+          status: { in: ['PICKED_UP', 'WAITING', 'READY'] },
+          createdAt: { gte: start, lt: end }
+        },
+        select: { amount: true, status: true }
+      });
+      const completed = parcels.filter(p => p.status === 'PICKED_UP');
+      return {
+        totalCount: parcels.length,
+        completedCount: completed.length,
+        revenue: completed.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+      };
+    };
+
+    const parcelToday = await getParcelStats(startOfToday, endOfToday);
+    const parcelWeekly = await getParcelStats(startOfWeek, endOfWeek);
+    const parcelMonthly = await getParcelStats(startOfMonth, endOfMonth);
+
     return sendSuccess(res, 200, 'Analytics fetched successfully', {
       today: {
         revenue: todayData.revenue,
@@ -196,7 +218,12 @@ exports.getAnalytics = async (req, res, next) => {
       orderAnalytics: {
         dailyData: dailyOrderData
       },
-      topItems
+      topItems,
+      parcelStats: {
+        today: parcelToday,
+        weekly: parcelWeekly,
+        monthly: parcelMonthly
+      }
     });
   } catch (error) {
     next(error);
